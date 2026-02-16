@@ -1,0 +1,581 @@
+/* Ionic CSS Variables and Custom Styles for DentSim */
+
+:root {
+  /* Primary Colors - Indigo/Purple theme */
+  --ion-color-primary: #6366f1;
+  --ion-color-primary-rgb: 99, 102, 241;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #5558d4;
+  --ion-color-primary-tint: #737af2;
+
+  /* Secondary - Emerald */
+  --ion-color-secondary: #10b981;
+  --ion-color-secondary-rgb: 16, 185, 129;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #0ea372;
+  --ion-color-secondary-tint: #28c08e;
+
+  /* Tertiary - Amber */
+  --ion-color-tertiary: #f59e0b;
+  --ion-color-tertiary-rgb: 245, 158, 11;
+  --ion-color-tertiary-contrast: #000000;
+  --ion-color-tertiary-contrast-rgb: 0, 0, 0;
+  --ion-color-tertiary-shade: #d88b0a;
+  --ion-color-tertiary-tint: #f6a823;
+
+  /* Success */
+  --ion-color-success: #22c55e;
+  --ion-color-success-rgb: 34, 197, 94;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #1ead53;
+  --ion-color-success-tint: #38cb6e;
+
+  /* Warning */
+  --ion-color-warning: #f59e0b;
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #d88b0a;
+  --ion-color-warning-tint: #f6a823;
+
+  /* Danger */
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #d23c3c;
+  --ion-color-danger-tint: #f15757;
+
+  /* Light */
+  --ion-color-light: #f8fafc;
+  --ion-color-light-rgb: 248, 250, 252;
+  --ion-color-light-contrast: #1e293b;
+  --ion-color-light-contrast-rgb: 30, 41, 59;
+  --ion-color-light-shade: #e2e8f0;
+  --ion-color-light-tint: #f8fafc;
+
+  /* Medium */
+  --ion-color-medium: #64748b;
+  --ion-color-medium-rgb: 100, 116, 139;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #475569;
+  --ion-color-medium-tint: #94a3b8;
+
+  /* Dark */
+  --ion-color-dark: #1e293b;
+  --ion-color-dark-rgb: 30, 41, 59;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #0f172a;
+  --ion-color-dark-tint: #334155;
+
+  /* Background */
+  --ion-background-color: #f8fafc;
+  --ion-background-color-rgb: 248, 250, 252;
+
+  /* Text colors */
+  --ion-text-color: #1e293b;
+  --ion-text-color-rgb: 30, 41, 59;
+
+  /* Border radius */
+  --ion-border-radius: 16px;
+
+  /* Safe areas */
+  --ion-safe-area-top: env(safe-area-inset-top);
+  --ion-safe-area-bottom: env(safe-area-inset-bottom);
+  --ion-safe-area-left: env(safe-area-inset-left);
+  --ion-safe-area-right: env(safe-area-inset-right);
+}
+
+/* ==========================================================================
+   Tab Bar Styles
+   ========================================================================== */
+
+.dentsim-tab-bar {
+  --background: #ffffff;
+  --border: none;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 24px 24px 0 0;
+  /*padding-bottom: var(--ion-safe-area-bottom);*/
+    height: 60px;
+}
+
+.dentsim-tab-bar ion-tab-button {
+  --color: #94a3b8;
+  --color-selected: #6366f1;
+  --padding-top: 6px;
+  --padding-bottom: 6px;
+}
+
+.dentsim-tab-bar ion-tab-button ion-icon {
+  font-size: 24px;
+}
+
+.dentsim-tab-bar ion-tab-button ion-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ==========================================================================
+   Toolbar Styles
+   ========================================================================== */
+
+.dentsim-toolbar {
+  --background: #ffffff;
+  --border-width: 0;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+.diagnosis-toolbar {
+  --background: #ffffff;
+  --border-width: 0 0 1px 0;
+  --border-color: #f1f5f9;
+}
+
+/* ==========================================================================
+   Content Styles
+   ========================================================================== */
+
+.dentsim-content {
+  --background: #f8fafc;
+}
+
+.login-content {
+  --background: linear-gradient(180deg, #f8fafc 0%, #e0e7ff 100%);
+}
+
+/* ==========================================================================
+   Card Styles
+   ========================================================================== */
+
+.dentsim-card {
+  --background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin: 0;
+  overflow: hidden;
+}
+
+.status-card {
+  border-radius: 24px;
+}
+
+.cta-card {
+  border-radius: 24px;
+  cursor: pointer;
+}
+
+.dentsim-class-card {
+  --background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Progress Bar Styles
+   ========================================================================== */
+
+.dentsim-progress {
+  --background: rgba(255, 255, 255, 0.2);
+  --progress-background: #ffffff;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.dentsim-progress-daily {
+  --background: #e2e8f0;
+  --progress-background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  height: 8px;
+  border-radius: 4px;
+}
+
+.badge-progress {
+  --background: #e2e8f0;
+  --progress-background: #6366f1;
+}
+
+.badge-progress-large {
+  --background: #e2e8f0;
+  --progress-background: linear-gradient(90deg, #6366f1, #a855f7);
+}
+
+/* ==========================================================================
+   Button Styles
+   ========================================================================== */
+
+.dentsim-cta-button {
+  --background: #ffffff;
+  --color: #6366f1;
+  --border-radius: 16px;
+  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  height: 52px;
+}
+
+.dentsim-primary-button {
+  --background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --color: #ffffff;
+  --border-radius: 16px;
+  font-weight: 700;
+  height: 52px;
+}
+
+.login-button {
+  --background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --color: #ffffff;
+  --border-radius: 16px;
+  --box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  font-weight: 700;
+  height: 56px;
+  margin-top: 8px;
+}
+
+.social-login-button {
+  --border-color: #e2e8f0;
+  --border-radius: 14px;
+  --color: #64748b;
+  font-weight: 600;
+  height: 52px;
+}
+
+.demo-button {
+  --color: #6366f1;
+  font-weight: 600;
+}
+
+.send-button {
+  --background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+
+.send-button::part(native) {
+  padding: 10px;
+}
+
+/* ==========================================================================
+   Chip Styles
+   ========================================================================== */
+
+.dentsim-chip {
+  --background: #f1f5f9;
+  --color: #64748b;
+  font-size: 12px;
+  height: 24px;
+}
+
+.dentsim-chip-success {
+  --background: #d1fae5;
+  --color: #059669;
+  font-weight: 600;
+}
+
+.diagnosis-submit-chip {
+  --background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --color: #ffffff;
+  font-weight: 600;
+  padding: 4px 12px;
+}
+
+/* ==========================================================================
+   Chat Styles
+   ========================================================================== */
+
+.chat-content {
+  --background: #f8fafc;
+}
+
+.chat-bubble-patient {
+  background: #ffffff;
+  border-radius: 20px 20px 20px 4px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.chat-bubble-student {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border-radius: 20px 20px 4px 20px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.chat-input {
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  font-size: 15px;
+}
+
+.chat-footer {
+  --background: #ffffff;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: #94a3b8;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Clinician Toolbar
+   ========================================================================== */
+
+.clinician-toolbar {
+  padding: 4px 0;
+}
+
+.clinician-toolbar button:active {
+  transform: scale(0.95);
+}
+
+/* ==========================================================================
+   Leaderboard Styles
+   ========================================================================== */
+
+.leaderboard-segment {
+  --background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.leaderboard-segment ion-segment-button {
+  --background-checked: #ffffff;
+  --color: #64748b;
+  --color-checked: #6366f1;
+  --indicator-color: transparent;
+  border-radius: 8px;
+  min-height: 36px;
+  font-weight: 600;
+}
+
+.leaderboard-list {
+  background: transparent;
+}
+
+.leaderboard-item {
+  --background: transparent;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 0;
+  margin-bottom: 8px;
+}
+
+.leaderboard-item::part(native) {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+
+.current-user-item::part(native) {
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  border: 2px solid #c7d2fe;
+}
+
+/* ==========================================================================
+   Badge Styles
+   ========================================================================== */
+
+.badge-segment {
+  --background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.badge-segment ion-segment-button {
+  --background-checked: #ffffff;
+  --color: #64748b;
+  --color-checked: #6366f1;
+  --indicator-color: transparent;
+  border-radius: 8px;
+  min-height: 36px;
+}
+
+.badge-component {
+  border: 1px solid #f1f5f9;
+}
+
+/* Badge shine animation */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(200%) rotate(45deg);
+  }
+}
+
+.animate-shine {
+  animation: shine 3s infinite;
+}
+
+/* ==========================================================================
+   Login Styles
+   ========================================================================== */
+/* Fix for centering login/signup page content */
+.login-content::part(scroll) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.login-content > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.login-input-group ion-input {
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 16px;
+}
+
+/* ==========================================================================
+   Modal Styles
+   ========================================================================== */
+
+.diagnosis-modal {
+  --border-radius: 24px 24px 0 0;
+}
+
+.result-modal {
+  --border-radius: 24px 24px 0 0;
+}
+
+.badge-detail-modal {
+  --border-radius: 24px 24px 0 0;
+}
+
+/* ==========================================================================
+   Diagnosis Page Specific
+   ========================================================================== */
+
+.diagnosis-page {
+  --ion-background-color: #f8fafc;
+}
+
+.diagnosis-option {
+  --background: #ffffff;
+  --border-color: #f1f5f9;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 0;
+  margin-bottom: 4px;
+}
+
+.diagnosis-option h3 {
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.diagnosis-option p {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ==========================================================================
+   Scrollbar Styles
+   ========================================================================== */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==========================================================================
+   Animation Utilities
+   ========================================================================== */
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ==========================================================================
+   Safe Area Handling
+   ========================================================================== */
+
+ion-content {
+  --padding-top: var(--ion-safe-area-top);
+}
+
+/* iOS specific overrides */
+.ios ion-content {
+  --padding-bottom: var(--ion-safe-area-bottom);
+}
+
+/* ==========================================================================
+   Confetti Placeholder Area
+   ========================================================================== */
+
+/* 
+ * CONFETTI ANIMATION PLACEHOLDER
+ * 
+ * To implement confetti on correct diagnosis, consider using:
+ * - canvas-confetti library
+ * - react-confetti library
+ * - CSS-based confetti animation
+ * 
+ * Trigger location: DiagnosisPage.tsx -> confirmDiagnosis function
+ * Look for: // PLACEHOLDER: Trigger confetti animation on correct diagnosis
+ */
+
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
