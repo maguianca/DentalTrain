@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-# DentalTrain
-DentalTrain: An Intelligent Virtual Patient Simulator for Endodontic Clinical Training
+
+# DentalTrain: An Intelligent Virtual Patient Simulator for Endodontic Clinical Training
 =======
 <p align="center">
   <img src="app/DentalSimFrontend/src/assets/NoBackground.png" alt="DentalTrain Logo" width="200"/>
