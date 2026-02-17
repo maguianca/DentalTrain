@@ -7,7 +7,7 @@
 
 # *DentalTrain (Ex-DentalSim)*
 
-**Aplicația poate fi accesată aici:** [DentalTrain-App](https://scs.ubbcluj.ro/aiinference/4)
+**Aplicația poate fi accesată aici:** [DentalTrain-App](https://dentaltrain.netlify.app/)
 
 ## Echipa
 
