@@ -155,8 +155,8 @@ const SettingsPage: React.FC = () => {
                         <IonItem className="rounded-xl bg-gray-50 mb-3">
                             <IonLabel position="stacked" color="medium">Username</IonLabel>
                             <IonInput
+                                readonly
                                 value={username}
-                                onIonInput={e => setUsername(e.detail.value!)}
                                 placeholder="Enter username"
                             />
                         </IonItem>
@@ -164,35 +164,20 @@ const SettingsPage: React.FC = () => {
                         <IonItem className="rounded-xl bg-gray-50 mb-3">
                             <IonLabel position="stacked" color="medium">Email</IonLabel>
                             <IonInput
+                                readonly
                                 type="email"
                                 value={email}
-                                onIonInput={e => setEmail(e.detail.value!)}
                                 placeholder="Enter email"
                             />
-                            <IonNote slot="helper" className="text-xs">
-                                Changing email will require re-verification
-                            </IonNote>
                         </IonItem>
 
                         <IonItem className="rounded-xl bg-gray-50 mb-4">
                             <IonLabel position="stacked" color="medium">Role</IonLabel>
-                            <IonSelect value={role} onIonChange={e => setRole(e.detail.value)}>
+                            <IonSelect disabled value={role}>
                                 <IonSelectOption value="Dental Student">Dental Student</IonSelectOption>
-                                <IonSelectOption value="Resident">Resident</IonSelectOption>
-                                <IonSelectOption value="General Dentist">General Dentist</IonSelectOption>
-                                <IonSelectOption value="Specialist">Specialist</IonSelectOption>
                                 <IonSelectOption value="Professor">Professor</IonSelectOption>
                             </IonSelect>
                         </IonItem>
-
-                        <IonButton
-                            expand="block"
-                            onClick={handleUpdateProfile}
-                            disabled={loading}
-                            className="dentsim-primary-button"
-                        >
-                            {loading ? <IonSpinner name="crescent" /> : 'Save Changes'}
-                        </IonButton>
                     </IonList>
                 </div>
 

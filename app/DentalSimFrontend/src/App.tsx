@@ -1,4 +1,3 @@
-// @ts-ignore
 import React from 'react';
 import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
@@ -29,24 +28,54 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from "./pages/SignupPage";
 import SettingsPage from "./pages/SettingsPage";
 import ClassPage from './pages/ClassPage';
+import PrivateRoute from './components/PrivateRoute';
 
 setupIonicReact({
   mode: 'ios', // Consistent iOS-like transitions across platforms
   animated: true,
 });
 
+// Helper function to check if user is authenticated
+const isAuthenticated = (): boolean => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000;
+    return Date.now() < exp;
+  } catch {
+    return false;
+  }
+};
+
+// Smart redirect component - redirects based on auth status
+const SmartRedirect: React.FC = () => {
+  return isAuthenticated() ? <Redirect to="/tabs/home" /> : <Redirect to="/login" />;
+};
+
 const App: React.FC = () => {
   return (
     <IonApp>
       <IonReactRouter>
         <IonRouterOutlet>
-            <Route path="/login" component={LoginPage} exact />
-            <Route path="/signup" component={SignupPage} exact />
-            <Route path="/tabs" component={MainTabs} />
-            <Route path="/diagnosis/:caseId?" component={DiagnosisPage} exact />
-            <Route path="/settings" component={SettingsPage} exact />
-            <Route path="/class/:classId" component={ClassPage} exact />
-            <Redirect exact from="/" to="/login" />
+          {/* Public routes */}
+          <Route path="/login" component={LoginPage} exact />
+          <Route path="/signup" component={SignupPage} exact />
+
+          {/* Protected routes - require JWT token */}
+          <PrivateRoute path="/tabs" component={MainTabs} />
+          <PrivateRoute path="/diagnosis/:caseId?" component={DiagnosisPage} exact />
+          <PrivateRoute path="/settings" component={SettingsPage} exact />
+          <PrivateRoute path="/class/:classId" component={ClassPage} exact />
+
+          {/* Default redirect */}
+          <Route exact path="/">
+            <SmartRedirect />
+          </Route>
+
+          {/* Catch-all route for unknown paths */}
+          <Route render={() => <SmartRedirect />} />
         </IonRouterOutlet>
       </IonReactRouter>
     </IonApp>

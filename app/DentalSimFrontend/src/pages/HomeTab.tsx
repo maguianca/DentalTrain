@@ -17,6 +17,7 @@ import {
     IonItem,
     IonLabel,
     IonInput,
+    IonAlert,
 } from '@ionic/react';
 import {
     flame,
@@ -52,11 +53,14 @@ const HomeTab: React.FC = () => {
     const [joinCode, setJoinCode] = useState('');
     const [isJoining, setIsJoining] = useState(false);
 
-    // Create class state
     const [createName, setCreateName] = useState('');
     const [createUniversity, setCreateUniversity] = useState('');
     const [createCourseCategory, setCreateCourseCategory] = useState('');
     const [isCreatingClass, setIsCreatingClass] = useState(false);
+
+    // Delete class state
+    const [classToDelete, setClassToDelete] = useState<string | null>(null);
+    const [isDeletingClass, setIsDeletingClass] = useState(false);
 
 
     useIonViewWillEnter(() => {
@@ -193,6 +197,39 @@ const HomeTab: React.FC = () => {
             setError(err.message || 'Failed to create classroom.');
         } finally {
             setIsCreatingClass(false);
+        }
+    };
+
+    const handleDeleteClass = async (classId: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('You must be logged in to delete a class.');
+                return;
+            }
+
+            setIsDeletingClass(true);
+
+            const response = await fetch(`${API_BASE_URL}/classroom/${classId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to delete classroom.');
+            }
+
+            setInfoMessage('Class deleted successfully.');
+            fetchClassrooms();
+        } catch (err: any) {
+            console.error('Delete class failed:', err);
+            setError(err.message || 'Failed to delete classroom.');
+        } finally {
+            setIsDeletingClass(false);
+            setClassToDelete(null);
         }
     };
 
@@ -520,30 +557,49 @@ const HomeTab: React.FC = () => {
                                 {classes.map((c) => (
                                     <IonCard
                                         key={c.id}
-                                        className="dentsim-class-card flex-shrink-0 w-56"
+                                        className="dentsim-class-card flex-shrink-0 w-56 h-[190px]"
                                         button
                                         onClick={() => history.push(`/class/${c.id}`)}
                                     >
-                                        <IonCardContent className="p-4">
-                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-indigo-100">
-                                                <IonIcon icon={school} className="text-indigo-600 text-xl" />
+                                        <IonCardContent className="p-4 h-full flex flex-col">
+                                            <div className="flex-grow">
+                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-indigo-100">
+                                                    <IonIcon icon={school} className="text-indigo-600 text-xl" />
+                                                </div>
+                                                <h4 className="font-bold text-gray-800 text-sm truncate">
+                                                    {c.name}
+                                                </h4>
+                                                {c.course_category && (
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {c.course_category}
+                                                    </p>
+                                                )}
+                                                {c.university && (
+                                                    <p className="text-xs text-gray-400 mt-1">
+                                                        {c.university}
+                                                    </p>
+                                                )}
+                                                <p className="text-[11px] text-gray-400 mt-1">
+                                                    Role: {isProfessor ? (c.role_in_class === 'Instructor' ? 'Professor' : (c.role_in_class || 'Student')) : 'Student'}
+                                                </p>
                                             </div>
-                                            <h4 className="font-bold text-gray-800 text-sm truncate">
-                                                {c.name}
-                                            </h4>
-                                            {c.course_category && (
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {c.course_category}
-                                                </p>
+
+                                            {isProfessor && ((c.role_in_class || '').toLowerCase() === 'professor' || (c.role_in_class || '').toLowerCase() === 'instructor') && (
+                                                <IonButton
+                                                    fill="solid"
+                                                    color="danger"
+                                                    size="small"
+                                                    expand="block"
+                                                    className="mt-3 text-xs font-bold"
+                                                    style={{ '--color': 'white' }}
+                                                    onClick={(e: any) => {
+                                                        e.stopPropagation();
+                                                        setClassToDelete(c.id);
+                                                    }}
+                                                >
+                                                    Delete this class
+                                                </IonButton>
                                             )}
-                                            {c.university && (
-                                                <p className="text-xs text-gray-400 mt-1">
-                                                    {c.university}
-                                                </p>
-                                            )}
-                                            <p className="text-[11px] text-gray-400 mt-1">
-                                                Role: {c.role_in_class || 'Student'}
-                                            </p>
                                         </IonCardContent>
                                     </IonCard>
                                 ))}
@@ -570,6 +626,32 @@ const HomeTab: React.FC = () => {
                     duration={2500}
                     color="success"
                     position="top"
+                />
+
+                {/* Delete Class Confirmation */}
+                <IonAlert
+                    isOpen={!!classToDelete}
+                    onDidDismiss={() => setClassToDelete(null)}
+                    header="Delete this class?"
+                    message="Are you sure? This action cannot be undone."
+                    buttons={[
+                        {
+                            text: 'Cancel',
+                            role: 'cancel',
+                            handler: () => {
+                                setClassToDelete(null);
+                            },
+                        },
+                        {
+                            text: 'Delete',
+                            role: 'destructive',
+                            handler: () => {
+                                if (classToDelete) {
+                                    handleDeleteClass(classToDelete);
+                                }
+                            },
+                        },
+                    ]}
                 />
             </IonContent>
         </IonPage>

@@ -333,8 +333,6 @@ const SignupPage: React.FC = () => {
                                                 style={{ paddingLeft: 0 }}
                                             >
                                                 <IonSelectOption value="Dental Student">Dental Student</IonSelectOption>
-                                                <IonSelectOption value="Resident">Resident</IonSelectOption>
-                                                <IonSelectOption value="General Dentist">General Dentist</IonSelectOption>
                                                 <IonSelectOption value="Professor">Professor</IonSelectOption>
                                             </IonSelect>
                                         </div>

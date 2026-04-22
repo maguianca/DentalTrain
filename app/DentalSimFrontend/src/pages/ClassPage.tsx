@@ -21,9 +21,13 @@ import {
     useIonViewWillEnter,
     IonItem,
     IonInput,
+    IonSelect,
+    IonSelectOption,
+    IonChip,
+    IonAlert,
 } from '@ionic/react';
 import { useHistory, useParams } from 'react-router-dom';
-import { people, bookOutline } from 'ionicons/icons';
+import { people, bookOutline, closeCircle, trash } from 'ionicons/icons';
 import { API_BASE_URL } from '../config';
 
 interface RouteParams {
@@ -45,8 +49,14 @@ interface Assignment {
     description?: string;
     required_sessions: number;
     allowed_names: string[];
+    allowed_categories: string[];
     start_at?: string;
     due_at?: string;
+    completed_sessions?: number;
+    correct_sessions?: number;
+    is_completed?: boolean;
+    avg_time_seconds?: number;
+    created_by?: string;
 }
 
 interface LeaderboardEntry {
@@ -57,6 +67,8 @@ interface LeaderboardEntry {
     level: number;
     rank: number;
     role_in_class?: string;
+    cases_completed?: number;
+    accuracy?: number;
 }
 
 interface AssignmentProgressEntry {
@@ -98,14 +110,18 @@ const ClassPage: React.FC = () => {
     const [createTitle, setCreateTitle] = useState('');
     const [createDescription, setCreateDescription] = useState('');
     const [createRequiredSessions, setCreateRequiredSessions] = useState('5');
-    const [createAllowedNamesText, setCreateAllowedNamesText] = useState('');
+    const [createAllowedNames, setCreateAllowedNames] = useState<string[]>([]);
+    const [availableDiseases, setAvailableDiseases] = useState<{ id: string, name: string }[]>([]);
+    const [createDueAt, setCreateDueAt] = useState('');
     const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
+    const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
 
     useIonViewWillEnter(() => {
         fetchUserProfile();
         fetchClassroomsAndSelect();
         fetchAssignments();
         fetchLeaderboard();
+        fetchDiseases();
     });
 
     const fetchUserProfile = async () => {
@@ -126,6 +142,27 @@ const ClassPage: React.FC = () => {
             }
         } catch (err) {
             console.error('Failed to fetch user profile in ClassPage:', err);
+        }
+    };
+
+    const fetchDiseases = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await fetch(`${API_BASE_URL}/diseases`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setAvailableDiseases(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch diseases:', err);
         }
     };
 
@@ -298,10 +335,7 @@ const ClassPage: React.FC = () => {
             return;
         }
 
-        const allowedNames = createAllowedNamesText
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
+        const allowedNames = createAllowedNames;
 
         try {
             const token = localStorage.getItem('token');
@@ -317,6 +351,7 @@ const ClassPage: React.FC = () => {
                 description: createDescription.trim() || undefined,
                 required_sessions: required,
                 allowed_names: allowedNames.length > 0 ? allowedNames : undefined,
+                due_at: createDueAt || undefined,
             };
 
             const response = await fetch(
@@ -340,13 +375,44 @@ const ClassPage: React.FC = () => {
             setCreateTitle('');
             setCreateDescription('');
             setCreateRequiredSessions('5');
-            setCreateAllowedNamesText('');
+            setCreateAllowedNames([]);
+            setCreateDueAt('');
             fetchAssignments();
         } catch (err: any) {
             console.error('Create assignment failed:', err);
             setError(err.message || 'Failed to create assignment.');
         } finally {
             setIsCreatingAssignment(false);
+        }
+    };
+
+    const handleDeleteAssignment = async (assignmentId: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('You must be logged in.');
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/assignment/${assignmentId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete assignment.');
+            }
+
+            setInfoMessage('Assignment deleted successfully.');
+            fetchAssignments();
+        } catch (err: any) {
+            console.error('Delete assignment failed:', err);
+            setError(err.message || 'Failed to delete assignment.');
+        } finally {
+            setAssignmentToDelete(null);
         }
     };
 
@@ -368,7 +434,7 @@ const ClassPage: React.FC = () => {
         classInfo?.role_in_class &&
         classInfo.role_in_class.toLowerCase().includes('prof');
 
-    const canCreateAssignment = isProfessorGlobal || isProfessorInClass;
+    const canCreateAssignment = isProfessorGlobal && isProfessorInClass;
 
     return (
         <IonPage>
@@ -400,16 +466,24 @@ const ClassPage: React.FC = () => {
                                     <p className="text-sm text-gray-600">
                                         Course:{' '}
                                         <span className="font-medium">
-                      {classInfo.course_category}
-                    </span>
+                                            {classInfo.course_category}
+                                        </span>
                                     </p>
                                 )}
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Your role:{' '}
-                                    <span className="font-medium">
-                    {classInfo.role_in_class || userInfo?.role || 'Student'}
-                  </span>
-                                </p>
+                                {classInfo.join_code && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        Class Code:{' '}
+                                        <span className="font-bold text-indigo-600 tracking-wider">
+                                            {classInfo.join_code}
+                                        </span>
+                                    </p>
+                                )}
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Your role:{' '}
+                                        <span className="font-medium">
+                                            {isProfessorGlobal ? (classInfo.role_in_class || 'Professor') : 'Student'}
+                                        </span>
+                                    </p>
                             </IonCardContent>
                         </IonCard>
                     )}
@@ -423,12 +497,16 @@ const ClassPage: React.FC = () => {
                         <IonSegmentButton value="assignments">
                             <IonLabel>Assignments</IonLabel>
                         </IonSegmentButton>
-                        <IonSegmentButton value="leaderboard">
-                            <IonLabel>Leaderboard</IonLabel>
-                        </IonSegmentButton>
-                        <IonSegmentButton value="report">
-                            <IonLabel>Report</IonLabel>
-                        </IonSegmentButton>
+                        {canCreateAssignment && (
+                            <IonSegmentButton value="leaderboard">
+                                <IonLabel>Leaderboard</IonLabel>
+                            </IonSegmentButton>
+                        )}
+                        {canCreateAssignment && (
+                            <IonSegmentButton value="report">
+                                <IonLabel>Report</IonLabel>
+                            </IonSegmentButton>
+                        )}
                     </IonSegment>
 
                     {/* ASSIGNMENTS */}
@@ -453,21 +531,10 @@ const ClassPage: React.FC = () => {
                                             />
                                         </IonItem>
 
-                                        <IonItem lines="none" className="rounded-xl bg-gray-50 mb-2">
-                                            <IonLabel position="stacked">
-                                                Description (optional)
-                                            </IonLabel>
-                                            <IonInput
-                                                value={createDescription}
-                                                placeholder="Short description"
-                                                onIonChange={(e) =>
-                                                    setCreateDescription(e.detail.value || '')
-                                                }
-                                            />
-                                        </IonItem>
+
 
                                         <IonItem lines="none" className="rounded-xl bg-gray-50 mb-2">
-                                            <IonLabel position="stacked">Required cases</IonLabel>
+                                            <IonLabel position="stacked">Number of cases to solve</IonLabel>
                                             <IonInput
                                                 type="number"
                                                 value={createRequiredSessions}
@@ -477,16 +544,52 @@ const ClassPage: React.FC = () => {
                                             />
                                         </IonItem>
 
-                                        <IonItem lines="none" className="rounded-xl bg-gray-50 mb-2">
+                                        <IonItem lines="none" className="rounded-xl bg-gray-50 mb-2 overflow-visible">
                                             <IonLabel position="stacked">
-                                                Diseases (comma separated, optional)
+                                                Select Diseases
                                             </IonLabel>
+                                            <IonSelect
+                                                value={null}
+                                                placeholder="Select disease to add"
+                                                onIonChange={(e) => {
+                                                    const val = e.detail.value;
+                                                    if (val && !createAllowedNames.includes(val)) {
+                                                        setCreateAllowedNames([...createAllowedNames, val]);
+                                                    }
+                                                }}
+                                            >
+                                                {availableDiseases.map((d) => (
+                                                    <IonSelectOption key={d.id} value={d.name}>
+                                                        {d.name}
+                                                    </IonSelectOption>
+                                                ))}
+                                            </IonSelect>
+                                        </IonItem>
+
+                                        {createAllowedNames.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                {createAllowedNames.map((name) => (
+                                                    <IonChip key={name} color="primary" className="m-0">
+                                                        <IonLabel>{name}</IonLabel>
+                                                        <IonIcon
+                                                            icon={closeCircle}
+                                                            onClick={() => {
+                                                                setCreateAllowedNames(createAllowedNames.filter(n => n !== name));
+                                                            }}
+                                                        />
+                                                    </IonChip>
+                                                ))}
+                                            </div>
+                                        )}
+
+
+
+                                        <IonItem lines="none" className="rounded-xl bg-gray-50 mb-3">
+                                            <IonLabel position="stacked">Deadline (optional)</IonLabel>
                                             <IonInput
-                                                value={createAllowedNamesText}
-                                                placeholder="e.g. Pulpitis acuta, Parodontita cronica"
-                                                onIonChange={(e) =>
-                                                    setCreateAllowedNamesText(e.detail.value || '')
-                                                }
+                                                type="datetime-local"
+                                                value={createDueAt}
+                                                onIonChange={(e) => setCreateDueAt(e.detail.value || '')}
                                             />
                                         </IonItem>
 
@@ -534,12 +637,39 @@ const ClassPage: React.FC = () => {
                                                     <p className="text-xs text-gray-500">
                                                         Required cases:{' '}
                                                         <span className="font-semibold">
-                              {a.required_sessions}
-                            </span>
+                                                            {a.required_sessions}
+                                                        </span>
                                                     </p>
-                                                    {a.allowed_names && a.allowed_names.length > 0 && (
+
+                                                    {a.completed_sessions !== undefined && (
+                                                        <div className="mt-1 text-xs">
+                                                            <p className={`${a.is_completed ? 'text-green-600 font-medium' : 'text-amber-600'} mb-0.5`}>
+                                                                Status: {a.is_completed ? '✅ Completed' : '⏳ In Progress'}
+                                                            </p>
+                                                            <p className="text-gray-500">
+                                                                Progress: {a.completed_sessions}/{a.required_sessions} cases done
+                                                            </p>
+                                                            <p className="text-gray-500">
+                                                                Accuracy: {a.correct_sessions}/{a.completed_sessions > 0 ? a.completed_sessions : 0} correct
+                                                            </p>
+                                                            <p className="text-gray-500">
+                                                                Avg time: {formatSeconds(a.avg_time_seconds || 0)}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    {a.due_at && (
+                                                        <p className={`text-[11px] mt-1 ${new Date(a.due_at) < new Date() ? 'text-red-500 font-bold' : 'text-indigo-500'}`}>
+                                                            Deadline: {new Date(a.due_at).toLocaleString()}
+                                                        </p>
+                                                    )}
+                                                    {isProfessorGlobal && a.created_by === userInfo?.id && a.allowed_names && a.allowed_names.length > 0 && (
                                                         <p className="text-[11px] text-gray-400 mt-1">
                                                             Diseases: {a.allowed_names.join(', ')}
+                                                        </p>
+                                                    )}
+                                                    {isProfessorGlobal && a.created_by === userInfo?.id && a.allowed_categories && a.allowed_categories.length > 0 && (
+                                                        <p className="text-[11px] text-gray-400 mt-1">
+                                                            Categories: {a.allowed_categories.join(', ')}
                                                         </p>
                                                     )}
                                                 </div>
@@ -547,17 +677,30 @@ const ClassPage: React.FC = () => {
                                                     <IonButton
                                                         size="small"
                                                         onClick={() => handleStartAssignmentCase(a.id)}
-                                                        disabled={isLoadingCase}
+                                                        disabled={isLoadingCase || (a.due_at ? new Date(a.due_at) < new Date() : false)}
+                                                        color={a.due_at && new Date(a.due_at) < new Date() ? 'medium' : 'primary'}
                                                     >
-                                                        {isLoadingCase ? 'Starting...' : 'Start'}
+                                                        {isLoadingCase ? 'Starting...' : (a.due_at && new Date(a.due_at) < new Date() ? 'Expired' : 'Start')}
                                                     </IonButton>
-                                                    <IonButton
-                                                        size="small"
-                                                        fill="clear"
-                                                        onClick={() => handleLoadReportForAssignment(a)}
-                                                    >
-                                                        View report
-                                                    </IonButton>
+                                                    {canCreateAssignment && (
+                                                        <IonButton
+                                                            size="small"
+                                                            fill="clear"
+                                                            onClick={() => handleLoadReportForAssignment(a)}
+                                                        >
+                                                            View report
+                                                        </IonButton>
+                                                    )}
+                                                    {isProfessorGlobal && a.created_by === userInfo?.id && (
+                                                        <IonButton
+                                                            size="small"
+                                                            fill="clear"
+                                                            color="danger"
+                                                            onClick={() => setAssignmentToDelete(a.id)}
+                                                        >
+                                                            <IonIcon icon={trash} slot="icon-only" />
+                                                        </IonButton>
+                                                    )}
                                                 </div>
                                             </div>
                                         </IonCardContent>
@@ -596,8 +739,7 @@ const ClassPage: React.FC = () => {
                                                             #{entry.rank} {entry.username}
                                                         </p>
                                                         <p className="text-[11px] text-gray-500">
-                                                            XP: {entry.xp} · Level {entry.level} · Streak{' '}
-                                                            {entry.streak}
+                                                            XP: {entry.xp} · Lvl {entry.level} · {entry.cases_completed || 0} cases · {entry.accuracy || 0}% acc
                                                         </p>
                                                     </div>
                                                 </div>
@@ -624,9 +766,18 @@ const ClassPage: React.FC = () => {
                                     <IonSpinner />
                                 </div>
                             ) : !progress || progress.length === 0 ? (
-                                <p className="text-sm text-gray-500">
-                                    No progress data yet for "{selectedAssignmentForReport.title}".
-                                </p>
+                                <div className="p-4 text-center">
+                                    <p className="text-sm text-gray-500 mb-2">
+                                        No students found or no progress data yet for "{selectedAssignmentForReport.title}".
+                                    </p>
+                                    <IonButton 
+                                        size="small" 
+                                        fill="clear" 
+                                        onClick={() => setSelectedSegment('assignments')}
+                                    >
+                                        Back to Assignments
+                                    </IonButton>
+                                </div>
                             ) : (
                                 <>
                                     <h4 className="text-sm font-semibold text-gray-700 mb-2">
@@ -681,6 +832,31 @@ const ClassPage: React.FC = () => {
                     duration={2500}
                     color="success"
                     position="top"
+                />
+                <IonAlert
+                    isOpen={!!assignmentToDelete}
+                    onDidDismiss={() => setAssignmentToDelete(null)}
+                    header="Delete Assignment?"
+                    message="Are you sure you want to delete this assignment? All student progress for this assignment will be lost."
+                    buttons={[
+                        {
+                            text: 'Cancel',
+                            role: 'cancel',
+                            cssClass: 'secondary',
+                            handler: () => {
+                                setAssignmentToDelete(null);
+                            },
+                        },
+                        {
+                            text: 'Delete',
+                            role: 'destructive',
+                            handler: () => {
+                                if (assignmentToDelete) {
+                                    handleDeleteAssignment(assignmentToDelete);
+                                }
+                            },
+                        },
+                    ]}
                 />
             </IonContent>
         </IonPage>

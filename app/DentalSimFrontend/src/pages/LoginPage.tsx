@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
     IonPage,
@@ -23,10 +23,32 @@ const LoginPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState('Welcome back!');
+    const [toastColor, setToastColor] = useState('success');
+
+    const [showForgotAlert, setShowForgotAlert] = useState(false);
+    const [showForgotSuccessAlert, setShowForgotSuccessAlert] = useState(false);
+    const [forgotSuccessMessage, setForgotSuccessMessage] = useState('');
 
     // NEW: Handle unverified account
     const [showVerificationAlert, setShowVerificationAlert] = useState(false);
     const [unverifiedEmail, setUnverifiedEmail] = useState('');
+
+    // If user already has a valid JWT, redirect to home
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const exp = payload.exp * 1000;
+                if (Date.now() < exp) {
+                    history.replace('/tabs/home');
+                }
+            } catch {
+                // Token is invalid, stay on login page
+            }
+        }
+    }, [history]);
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -75,6 +97,33 @@ const LoginPage: React.FC = () => {
 
         } catch (err: any) {
             setError(err.message || 'Unable to connect to server');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    const handleForgotPassword = async (emailToReset: string) => {
+        if (!emailToReset) {
+            setError('Please enter your email to reset password.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: emailToReset }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to reset password');
+            }
+
+            setForgotSuccessMessage(data.message);
+            setShowForgotSuccessAlert(true);
+        } catch (err: any) {
+            setError(err.message || 'Unable to reset password');
         } finally {
             setIsLoading(false);
         }
@@ -141,6 +190,7 @@ const LoginPage: React.FC = () => {
                                 </div>
                             </div>
 
+
                             {error && (
                                 <div className="text-center">
                                     <IonText color="danger" className="text-sm font-medium">
@@ -163,9 +213,15 @@ const LoginPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Sign Up Link */}
-                    <div className="text-center">
-                        <p className="text-gray-500">
+                    {/* Links below card */}
+                    <div className="text-center space-y-2">
+                        <button 
+                            className="text-indigo-600 text-sm font-medium"
+                            onClick={() => setShowForgotAlert(true)}
+                        >
+                            Forgot your password?
+                        </button>
+                        <p className="text-gray-500 text-sm">
                             Don't have an account?{' '}
                             <button className="text-indigo-600 font-semibold" onClick={() => history.push('/signup')}>
                                 Sign Up
@@ -178,9 +234,9 @@ const LoginPage: React.FC = () => {
                 <IonToast
                     isOpen={showToast}
                     onDidDismiss={() => setShowToast(false)}
-                    message="Welcome back!"
+                    message={toastMessage}
                     duration={1500}
-                    color="success"
+                    color={toastColor}
                     position="top"
                 />
 
@@ -210,6 +266,43 @@ const LoginPage: React.FC = () => {
                             }
                         }
                     ]}
+                />
+
+                {/* Forgot Password Entry Alert */}
+                <IonAlert
+                    isOpen={showForgotAlert}
+                    onDidDismiss={() => setShowForgotAlert(false)}
+                    header="Reset Password"
+                    subHeader="Enter your institutional email"
+                    message="We will send a new 6-character temporary password to your email."
+                    inputs={[
+                        {
+                            name: 'email',
+                            type: 'email',
+                            placeholder: 'user@university.edu'
+                        }
+                    ]}
+                    buttons={[
+                        {
+                            text: 'Cancel',
+                            role: 'cancel'
+                        },
+                        {
+                            text: 'Reset Password',
+                            handler: (data) => {
+                                handleForgotPassword(data.email);
+                            }
+                        }
+                    ]}
+                />
+
+                {/* Forgot Password Success Alert */}
+                <IonAlert
+                    isOpen={showForgotSuccessAlert}
+                    onDidDismiss={() => setShowForgotSuccessAlert(false)}
+                    header="Check your Email"
+                    message={forgotSuccessMessage}
+                    buttons={['OK']}
                 />
             </IonContent>
         </IonPage>

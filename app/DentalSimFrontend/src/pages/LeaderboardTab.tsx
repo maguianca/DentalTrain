@@ -88,7 +88,11 @@ const LeaderboardTab: React.FC = () => {
                                             </div>
                                         </IonAvatar>
                                         <p className="font-bold text-gray-700 text-sm truncate w-full text-center">{second.username}</p>
-                                        <p className="text-xs text-gray-500">{second.xp} XP</p>
+                                        <p className="text-[10px] text-gray-500 font-bold">{second.xp} XP</p>
+                                        <div className="flex flex-col items-center mt-1">
+                                            <p className="text-[9px] text-gray-400">{second.cases_completed || 0} cases</p>
+                                            <p className="text-[9px] text-emerald-600 font-medium">{second.accuracy || 0}% acc</p>
+                                        </div>
                                         <div className="w-full h-16 bg-gray-200 rounded-t-lg mt-2 flex items-center justify-center text-gray-400 font-bold">2</div>
                                     </>
                                 )}
@@ -109,6 +113,10 @@ const LeaderboardTab: React.FC = () => {
                                         </div>
                                         <p className="font-bold text-gray-800 truncate w-full text-center">{first.username}</p>
                                         <p className="text-sm text-yellow-600 font-bold">{first.xp} XP</p>
+                                        <div className="flex gap-2 mt-1">
+                                            <p className="text-[10px] text-gray-500">{first.cases_completed || 0} cases</p>
+                                            <p className="text-[10px] text-emerald-600 font-bold">{first.accuracy || 0}% acc</p>
+                                        </div>
                                         <div className="w-full h-24 bg-gradient-to-b from-yellow-300 to-yellow-400 rounded-t-lg mt-2 flex items-center justify-center text-white font-bold text-xl">1</div>
                                     </>
                                 )}
@@ -125,7 +133,11 @@ const LeaderboardTab: React.FC = () => {
                                             </div>
                                         </IonAvatar>
                                         <p className="font-bold text-gray-700 text-sm truncate w-full text-center">{third.username}</p>
-                                        <p className="text-xs text-gray-500">{third.xp} XP</p>
+                                        <p className="text-[10px] text-gray-500 font-bold">{third.xp} XP</p>
+                                        <div className="flex flex-col items-center mt-1">
+                                            <p className="text-[9px] text-gray-400">{third.cases_completed || 0} cases</p>
+                                            <p className="text-[9px] text-emerald-600 font-medium">{third.accuracy || 0}% acc</p>
+                                        </div>
                                         <div className="w-full h-12 bg-orange-200 rounded-t-lg mt-2 flex items-center justify-center text-orange-400 font-bold">3</div>
                                     </>
                                 )}
@@ -167,10 +179,12 @@ const LeaderboardTab: React.FC = () => {
                                         <span className="text-xs text-gray-500">Lvl {entry.level}</span>
                                         {entry.streak > 0 && (
                                             <span className="flex items-center text-xs text-orange-500 font-medium">
-                        <IonIcon icon={flame} className="mr-0.5 text-[10px]" />
+                                                <IonIcon icon={flame} className="mr-0.5 text-[10px]" />
                                                 {entry.streak}
-                      </span>
+                                            </span>
                                         )}
+                                        <span className="text-[10px] text-gray-400 border-l border-gray-200 pl-2">{entry.cases_completed || 0} cases</span>
+                                        <span className="text-[10px] text-emerald-600 font-bold border-l border-gray-200 pl-2">{entry.accuracy || 0}% acc</span>
                                     </div>
                                 </IonLabel>
 
