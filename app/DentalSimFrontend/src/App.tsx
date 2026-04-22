@@ -57,7 +57,7 @@ const SmartRedirect: React.FC = () => {
 const App: React.FC = () => {
   return (
     <IonApp>
-      <IonReactRouter>
+      <IonReactRouter basename="/app/chatbot">
         <IonRouterOutlet>
           {/* Public routes */}
           <Route path="/login" component={LoginPage} exact />
