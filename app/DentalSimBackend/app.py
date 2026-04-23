@@ -4,9 +4,6 @@ import datetime as dt
 import random
 import string
 import requests
-import time
-import threading
-import csv
 from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -18,6 +15,9 @@ from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import university_config
 from clinical_rules import resolve_clinical_test
+import time
+import threading
+import csv
 
 class PerformanceLogger:
     LOG_FILE = "performance_logs.csv"
@@ -46,6 +46,7 @@ class PerformanceLogger:
                 pass
 
     def set_session(self, session_id, message=""):
+        """Setează detaliile sesiunii pe parcurs"""
         self.session_id = session_id
         self.message_len = len(message) if message else 0
 
@@ -56,6 +57,7 @@ class PerformanceLogger:
         self.status = f"ERROR: {str(error_msg)}"
 
     def save(self):
+        """Oprește cronometrul, scade userul și scrie în fișier"""
         duration = time.time() - self.start_time
         
         with PerformanceLogger._lock:
@@ -77,20 +79,13 @@ class PerformanceLogger:
             print(f"[LOG] {duration:.2f}s | Users: {self.concurrent_users} | {self.status}")
         except Exception as e:
             print(f"Log Error: {e}")
+            
+BASE_URL = '/app/chatbot'
+# --- APP CONFIGURATION ---
+app = Flask(__name__, static_folder='static', static_url_path=BASE_URL)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-BASE_URL = "/aiinference/4"
-
-app = Flask(__name__)
-# Updated CORS for production and local development
-CORS(app, resources={r"/*": {
-    "origins": [
-        "https://dentaltrain.netlify.app", 
-        "http://localhost:8100", 
-        "http://localhost:3000",
-        "http://localhost:9003"
-    ]
-}}, supports_credentials=True)
-
+# Schimbă cheia la producție!
 app.config['JWT_SECRET_KEY'] = 'super-secret-dental-key-change-me'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = dt.timedelta(hours=24)
 jwt = JWTManager(app)
@@ -111,11 +106,12 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 if not SMTP_PASSWORD:
     raise ValueError("Error: SMTP_PASSWORD not found in .env file")
 
+
 # --- LLM ENDPOINTS ---
-AI_SERVER_URL = "http://127.0.0.1:5050"
+# Folosim variabila de mediu pentru a gasi containerul AI
+AI_SERVER_URL = os.getenv("AI_SERVER_URL", "http://ai-server:5050")
 HF_URL = f"{AI_SERVER_URL}/v1/chat/completions"
 HF_HEADERS = {"Content-Type": "application/json"}
-
 # --- ASSETS FOLDER ---
 ASSETS_FOLDER = os.path.join(os.path.dirname(__file__), 'clinical_assets')
 
@@ -193,21 +189,18 @@ def get_random_disease(allowed_names=None, allowed_categories=None, exclude_ids=
         return None
 
     exclude_ids = set(exclude_ids or [])
-
-    # Pool initial
     pool = []
     for d in docs:
         if d.id in exclude_ids:
             continue
-
         data = d.to_dict()
         name = data.get("name")
         category = data.get("category", "")
-
+        
         # Filtru nume
         if allowed_names and name not in allowed_names:
             continue
-
+            
         # Filtru categorie
         if allowed_categories:
             matching_cat = False
@@ -217,7 +210,7 @@ def get_random_disease(allowed_names=None, allowed_categories=None, exclude_ids=
                     break
             if not matching_cat:
                 continue
-
+        
         pool.append(d)
 
     if not pool:
@@ -227,10 +220,10 @@ def get_random_disease(allowed_names=None, allowed_categories=None, exclude_ids=
     if not allowed_names and not allowed_categories:
         endo_docs = [d for d in pool if "non endodontic" not in d.to_dict().get("category", "").lower()]
         non_endo_docs = [d for d in pool if "non endodontic" in d.to_dict().get("category", "").lower()]
-
+        
         if not non_endo_docs:
             return random.choice(pool)
-
+            
         # 50/50 chance între endo și non-endo random
         if random.random() < 0.5 and endo_docs:
             return random.choice(endo_docs)
@@ -294,7 +287,7 @@ def check_and_award_badge(user_id, badge_name, xp_bonus=0):
     return ""
 
 def send_verification_email(to_email, code):
-    subject = "Your DentalSim Verification Code"
+    subject = "Your DentalTrain Verification Code"
     body = f"Welcome! Your verification code is: {code}"
 
     msg = MIMEText(body)
@@ -316,7 +309,8 @@ def send_verification_email(to_email, code):
 get_university_name = university_config.get_university_name
 
 # --- OPTIONAL: endpoint generic de adăugare în Firestore ---
-@app.route(BASE_URL+"/firebase/add", methods=["POST"])
+@app.route(BASE_URL+ "/firebase/add", methods=["POST"])
+@jwt_required()
 def add_to_firestore():
     data = request.get_json()
     collection_name = data.get("collection", "default_collection")
@@ -381,6 +375,35 @@ def register():
         "needs_verification": True
     }), 201
 
+@app.route(BASE_URL+"/auth/change-password", methods=["PUT"])
+@jwt_required()
+def change_password():
+    current_user_id = get_jwt_identity()
+    user_ref = firebase_db.collection("user").document(current_user_id)
+    user_doc = user_ref.get()
+    if not user_doc.exists:
+        return jsonify({"error": "User not found"}), 404
+
+    data = request.get_json()
+    current_password = data.get("current_password", "")
+    new_password = data.get("new_password", "")
+
+    user_data = user_doc.to_dict()
+
+    if not check_password_hash(user_data.get("password_hash", ""), current_password):
+        return jsonify({"error": "Invalid current password"}), 401
+        
+    if len(new_password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters"}), 400
+
+    user_ref.update({
+        "password_hash": generate_password_hash(new_password)
+    })
+
+    return jsonify({"message": "Password changed successfully"}), 200
+
+
+
 
 @app.route(BASE_URL+"/auth/verify", methods=["POST"])
 def verify_account():
@@ -414,7 +437,7 @@ def login():
     user_doc = get_user_by_username(username)
     if not user_doc:
         user_doc = get_user_by_email(username)
-
+        
     if not user_doc:
         return jsonify({"error": "Invalid credentials"}), 401
 
@@ -442,79 +465,6 @@ def login():
             "university": user.get("university"),  # FIXED: Added university to response
         }
     })
-
-@app.route(BASE_URL+"/auth/forgot-password", methods=["POST"])
-def forgot_password():
-    data = request.get_json()
-    email = data.get("email", "").strip().lower()
-
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-
-    user_doc = get_user_by_email(email)
-    if not user_doc:
-        return jsonify({"error": "No user found with this email"}), 404
-
-    # Generate random 6-char password (letters and digits)
-    new_password = "".join(random.choices(string.ascii_letters + string.digits, k=6))
-    new_password_hash = generate_password_hash(new_password)
-
-    # Update in Firestore
-    firebase_db.collection("user").document(user_doc.id).update({
-        "password_hash": new_password_hash
-    })
-
-    # Send email
-    send_forgot_password_email(email, new_password)
-
-    return jsonify({"message": "A new password has been sent to your email."}), 200
-
-def send_forgot_password_email(to_email, new_password):
-    subject = "Your New DentalSim Password"
-    body = f"Hello,\n\nYour password has been reset. Your new password is: {new_password}\n\nPlease log in and change it from your profile as soon as possible."
-
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = SMTP_EMAIL
-    msg['To'] = to_email
-
-    try:
-        # Folosim Gmail SMTP la fel ca la verification email
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.send_message(msg)
-        print(f"Forgot password email sent to {to_email}")
-    except Exception as e:
-        print(f"Failed to send forgot password email: {e}")
-
-@app.route(BASE_URL+"/auth/change-password", methods=["PUT"])
-@jwt_required()
-def change_password():
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
-    
-    current_password = data.get("current_password")
-    new_password = data.get("new_password")
-    
-    if not current_password or not new_password:
-        return jsonify({"error": "Missing password data"}), 400
-        
-    user_doc = firebase_db.collection("user").document(current_user_id).get()
-    if not user_doc.exists:
-        return jsonify({"error": "User not found"}), 404
-        
-    user = user_doc.to_dict()
-    
-    if not check_password_hash(user.get("password_hash", ""), current_password):
-        return jsonify({"error": "Current password incorrect"}), 401
-        
-    new_hash = generate_password_hash(new_password)
-    firebase_db.collection("user").document(current_user_id).update({
-        "password_hash": new_hash
-    })
-    
-    return jsonify({"message": "Password updated successfully"}), 200
 
 
 @app.route(BASE_URL+"/chat/start/random", methods=["POST"])
@@ -575,55 +525,100 @@ def start_random_chat():
         "message": "** The patient has entered the office. **"
     })
 
+@app.route(BASE_URL+"/classroom/<class_id>/delete", methods=["POST"])
+@jwt_required()
+def delete_classroom(class_id):
+    """
+    Deletes a class and its membership. Requires Professor role.
+    """
+    current_user_id = get_jwt_identity()
+
+    memb = firebase_db.collection("class_membership") \
+        .where("classroom_id", "==", class_id) \
+        .where("user_id", "==", current_user_id) \
+        .where("role_in_class", "==", "Professor") \
+        .limit(1).get()
+
+    if not memb:
+        return jsonify({"error": "Only class professor can delete this classroom"}), 403
+
+    # Delete the classroom
+    firebase_db.collection("classroom").document(class_id).delete()
+
+    return jsonify({"message": "Classroom deleted"}), 200
+
 
 @app.route(BASE_URL+"/chat", methods=["POST"])
 @jwt_required()
 def chat():
-    data = request.get_json()
-    session_id = data.get("session_id")
-    user_message = data.get("message", "")
-
-    session_doc = firebase_db.collection("chat_session").document(session_id).get()
-    if not session_doc.exists:
-        return jsonify({"error": "Invalid session"}), 404
-    session = session_doc.to_dict()
-
-    # mesajul studentului
-    add_chat_message(session_id, "student", user_message)
-
-    # sistem prompt din boală
-    disease_doc = firebase_db.collection("disease").document(session["disease_id"]).get()
-    if not disease_doc.exists:
-        return jsonify({"error": "Disease missing"}), 500
-    disease = disease_doc.to_dict()
-
-    recent_msgs = get_last_messages(session_id, limit=10)
-    conversation_history = [{"role": "system", "content": disease["system_prompt"]}]
-    for msg_doc in recent_msgs:
-        m = msg_doc.to_dict()
-        role = "user" if m["sender"] == "student" else "assistant"
-        conversation_history.append({"role": role, "content": m["content"]})
-
-    payload = {
-        "messages": conversation_history,
-        "max_new_tokens": 150,
-        "temperature": 0.2
-    }
-
+    tracker = PerformanceLogger()
     try:
-        response = requests.post(HF_URL, json=payload, headers=HF_HEADERS, timeout=120)
-        if response.status_code == 200:
-            ai_data = response.json()
-            bot_reply = ai_data.get("generated_text", "")
-            add_chat_message(session_id, "patient", bot_reply)
-            return jsonify({"reply": bot_reply})
-        else:
-            return jsonify({"error": f"LLM Error: {response.status_code}"}), 500
+      data = request.get_json()
+      session_id = data.get("session_id")
+      user_message = data.get("message", "")
+      tracker.set_session(session_id, user_message)
+      session_doc = firebase_db.collection("chat_session").document(session_id).get()
+      if not session_doc.exists:
+          tracker.fail("Invalid Session")
+          return jsonify({"error": "Invalid session"}), 404
+      session = session_doc.to_dict()
+
+      # mesajul studentului
+      add_chat_message(session_id, "student", user_message)
+
+      # sistem prompt din boală
+      disease_doc = firebase_db.collection("disease").document(session["disease_id"]).get()
+      if not disease_doc.exists:
+          tracker.fail("Disease Missing")
+          return jsonify({"error": "Disease missing"}), 500
+      disease = disease_doc.to_dict()
+
+      recent_msgs = get_last_messages(session_id, limit=10)
+      conversation_history = [{"role": "system", "content": disease["system_prompt"]}]
+      for msg_doc in recent_msgs:
+          m = msg_doc.to_dict()
+          role = "user" if m["sender"] == "student" else "assistant"
+          conversation_history.append({"role": role, "content": m["content"]})
+
+      payload = {
+        "model": "dental-model",
+        "messages": conversation_history,
+        "max_tokens": 150,
+        "temperature": 0.2
+      }
+
+      response = requests.post(HF_URL, json=payload, headers=HF_HEADERS, timeout=180)
+      response.raise_for_status() 
+      ai_data = response.json()
+        
+      if 'choices' in ai_data and len(ai_data['choices']) > 0:
+          bot_reply = ai_data['choices'][0]['message']['content']
+      else:
+          bot_reply = "Eroare: AI-ul nu a generat un răspuns valid."
+          tracker.fail("Empty AI Response")
+          print(f"Debug AI Response: {ai_data}") # Sa vezi in consola ce a venit gresit
+
+      add_chat_message(session_id, "patient", bot_reply)
+      return jsonify({"reply": bot_reply})
+
+    except requests.exceptions.ConnectionError:
+        tracker.fail("Connection Error")
+        print("⚠️ AI Server is down/restarting...")
+        return jsonify({
+            "error": "AI-ul se trezește... Te rog mai apasă o dată pe Send în 5 secunde!",
+            "is_retryable": True 
+        }), 503
+
     except Exception as e:
+        # Orice alta eroare
+        tracker.fail(e)
+        print(f"Eroare generala: {e}")
         return jsonify({"error": str(e)}), 500
+    finally: 
+        tracker.save()
 
 
-@app.route(BASE_URL+"/chat/diagnose", methods=["POST"])
+@app.route(BASE_URL +"/chat/diagnose", methods=["POST"])
 @jwt_required()
 def check_diagnosis():
     current_user_id = get_jwt_identity()
@@ -732,7 +727,10 @@ def check_diagnosis():
     if total_cases + 1 >= 100:
         badge_alerts += check_and_award_badge(current_user_id, "Master Diagnostician", 2000)
 
-    current_hour = dt.datetime.now(dt.UTC).hour
+    # Localize time to Romania (UTC+2)
+    local_time = dt.datetime.now(dt.UTC) + dt.timedelta(hours=2)
+    current_hour = local_time.hour
+    
     if current_hour < 7:
         badge_alerts += check_and_award_badge(current_user_id, "Early Bird", 25)
     if current_hour >= 23:
@@ -741,18 +739,15 @@ def check_diagnosis():
     # ---------------- STREAK LOGIC ----------------
     def _to_aware_date(val) -> dt.date | None:
         """
-        Normalizează diverse reprezentări de timp la date (YYYY-MM-DD), UTC-aware.
-        Acceptă: Firestore Timestamp (dt.datetime), string ISO / 'YYYY-MM-DD HH:MM:SS[.ffffff]'.
+        Normalizează diverse reprezentări de timp la date (YYYY-MM-DD), UTC-aware (plus offset RO).
         """
         if isinstance(val, dt.datetime):
             aware = val.astimezone(dt.UTC) if val.tzinfo else val.replace(tzinfo=dt.UTC)
-            return aware.date()
+            return (aware + dt.timedelta(hours=2)).date()
         if isinstance(val, str):
-            # încearcă ISO 8601
             try:
                 d = dt.datetime.fromisoformat(val)
             except ValueError:
-                # fallback pe format clasic
                 d = None
                 for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
                     try:
@@ -763,14 +758,14 @@ def check_diagnosis():
                 if d is None:
                     return None
             aware = d if d.tzinfo else d.replace(tzinfo=dt.UTC)
-            return aware.date()
+            return (aware + dt.timedelta(hours=2)).date()
         return None
 
     # --- în interiorul /chat/diagnose, după ce ai încărcat `user` și ai `user_ref` și `batch` ---
     streak = int(user.get("streak", 0))
-    last_active_raw = user.get("last_active_date")  # poate fi Timestamp, string, None
+    last_active_raw = user.get("last_active_date")
 
-    today = dt.datetime.now(dt.UTC).date()
+    today = local_time.date()
     last_date = _to_aware_date(last_active_raw)
 
     if last_date != today:
@@ -779,7 +774,7 @@ def check_diagnosis():
             streak += 1
         else:
             streak = 1
-        # Stochează ca Timestamp (momentul serverului). Firestore îl va arăta ca 'December X, 2025 ...'
+        
         batch.update(user_ref, {
             "streak": streak,
             "last_active_date": firestore.SERVER_TIMESTAMP
@@ -809,7 +804,7 @@ def check_diagnosis():
             .where("assignment_id", "==", assignment_id) \
             .where("user_id", "==", current_user_id) \
             .limit(1).get()
-
+         
         if prog_query:
             prog_doc = prog_query[0]
             prog = prog_doc.to_dict()
@@ -900,9 +895,6 @@ def get_clinical_data():
 
         if filename:
             response_data["type"] = "image"
-            # We return the filename so the frontend knows something exists.
-            # The frontend doesn't show this filename to the user;
-            # it just uses it to decide to open the modal.
             response_data["content"] = filename
         else:
             # Case has no X-ray/Photo
@@ -927,12 +919,6 @@ def get_profile():
         .where("is_completed", "==", 1).stream()
     completed_list = [s.to_dict() for s in completed]
     total_cases = len(completed_list)
-
-    def is_truthy_number(x):
-        try:
-            return int(x) == 1
-        except Exception:
-            return False
 
     correct_cases = sum(1 for s in completed_list if s.get("was_correct"))
 
@@ -990,10 +976,8 @@ def update_profile():
         existing_email = get_user_by_email(new_email)
         if existing_email and existing_email.id != current_user_id:
             return jsonify({"error": "Email already taken"}), 409
-        # When changing email, might want to re-verify
         updates["email"] = new_email
-        updates["is_verified"] = False  # Require re-verification
-        # Optionally send new verification code here
+        updates["is_verified"] = False  
 
     if updates:
         user_ref.update(updates)
@@ -1003,7 +987,6 @@ def update_profile():
 
 @app.route(BASE_URL+"/auth/leaderboard", methods=["GET"])
 def get_leaderboard():
-    # Poate necesita index pentru order_by('xp' DESC). Creezi din Firebase console când îți sugerează.
     users = firebase_db.collection("user").order_by("xp", direction=firestore.Query.DESCENDING).limit(50).get()
     leaderboard_data = []
     for index, u_doc in enumerate(users):
@@ -1012,7 +995,6 @@ def get_leaderboard():
         cases_count = int(u.get("cases_completed", 0))
         cases_correct = int(u.get("cases_correct", 0))
         accuracy = int((cases_correct / cases_count) * 100) if cases_count > 0 else 0
-
         leaderboard_data.append({
             "id": u_doc.id,
             "username": u.get("username"),
@@ -1027,7 +1009,7 @@ def get_leaderboard():
         })
     return jsonify(leaderboard_data)
 
-@app.route(BASE_URL+"/universities", methods=["GET"])
+@app.route(BASE_URL+'/universities', methods=['GET'])
 def list_universities():
     universities = university_config.get_list_of_universities()
     return jsonify({"universities": universities}), 200
@@ -1042,32 +1024,27 @@ def start_assignment_chat():
     if not assignment_id:
         return jsonify({"error": "assignment_id required"}), 400
 
-    # luam assignment-ul din Firestore
     assignment_doc = firebase_db.collection("assignment").document(assignment_id).get()
     if not assignment_doc.exists:
         return jsonify({"error": "Assignment not found"}), 404
 
     assignment = assignment_doc.to_dict()
-
-    # Check deadline
+     # Check deadline
     due_at = assignment.get("due_at")
     if due_at:
         try:
             now = dt.datetime.now(dt.UTC)
-            # Normalize ISO string from frontend (could be 2026-03-20T12:00)
             due_dt = dt.datetime.fromisoformat(due_at.replace('Z', '+00:00'))
             if due_dt.tzinfo is None:
                 due_dt = due_dt.replace(tzinfo=dt.UTC)
-
+            
             if now > due_dt:
                 return jsonify({"error": "The deadline for this assignment has passed."}), 403
         except Exception as e:
             app.logger.warning(f"Deadline check failed for assignment {assignment_id}: {e}")
-
     allowed_names = assignment.get("allowed_names")
     allowed_categories = assignment.get("allowed_categories")
 
-    # EVITARE REPETIȚII: vedem ce boli a terminat deja studentul
     past_sessions = firebase_db.collection("chat_session") \
         .where("user_id", "==", current_user_id) \
         .where("assignment_id", "==", assignment_id) \
@@ -1075,19 +1052,14 @@ def start_assignment_chat():
         .stream()
     seen_disease_ids = [s.to_dict().get("disease_id") for s in past_sessions]
 
-    # Încercăm să alegem o boală ne-văzută
     disease_doc = get_random_disease(
-        allowed_names=allowed_names,
-        allowed_categories=allowed_categories,
+        allowed_names=allowed_names, 
+        allowed_categories=allowed_categories, 
         exclude_ids=seen_disease_ids
     )
 
-    # Dacă a terminat toate bolile din pool, nu mai permte repetiții
     if not disease_doc:
         return jsonify({"error": "You have already completed all available diseases for this assignment."}), 400
-
-    if not disease_doc:
-        return jsonify({"error": "No diseases match assignment filters"}), 500
 
     disease_id = disease_doc.id
     disease_data = disease_doc.to_dict()
@@ -1102,7 +1074,6 @@ def start_assignment_chat():
     percussion_result = resolve_clinical_test(disease_name, "percussion")
     thermal_result = resolve_clinical_test(disease_name, "thermal")
 
-    # Pack the data
     context_data = {
         "xray_image": selected_xray,
         "examine_image": selected_photo,
@@ -1113,7 +1084,7 @@ def start_assignment_chat():
     session_ref = create_chat_session(
         user_id=current_user_id,
         disease_id=disease_id,
-        clinical_context=context_data, # <--- Added this
+        clinical_context=context_data, 
         assignment_id=assignment_id
     )
 
@@ -1128,12 +1099,7 @@ def start_assignment_chat():
 @app.route(BASE_URL+"/classroom", methods=["POST"])
 @jwt_required()
 def create_classroom():
-    """
-    Create a new classroom. Only Professors can do this.
-    """
     current_user_id = get_jwt_identity()
-
-    # Verifică rol global
     user_doc = firebase_db.collection("user").document(current_user_id).get()
     if not user_doc.exists:
         return jsonify({"error": "User not found"}), 404
@@ -1163,7 +1129,6 @@ def create_classroom():
         "created_at": firestore.SERVER_TIMESTAMP
     })
 
-    # creator becomes Instructor
     add_class_membership(current_user_id, ref.id, "Professor")
 
     return jsonify({
@@ -1177,10 +1142,6 @@ def create_classroom():
 @app.route(BASE_URL+"/classroom/join", methods=["POST"])
 @jwt_required()
 def join_classroom():
-    """
-    Join a classroom using its join_code.
-    Body JSON: { "class_code": "ENDO25G3" }
-    """
     current_user_id = get_jwt_identity()
     data = request.get_json() or {}
     class_code = data.get("class_code", "").strip()
@@ -1195,7 +1156,6 @@ def join_classroom():
     classroom_id = classroom_doc.id
     add_class_membership(current_user_id, classroom_id, "Student")
 
-    # optional: also set primary classroom_id on user, if you want
     firebase_db.collection("user").document(current_user_id).update({
         "classroom_id": classroom_id
     })
@@ -1209,9 +1169,6 @@ def join_classroom():
 @app.route(BASE_URL+"/classroom/my", methods=["GET"])
 @jwt_required()
 def get_my_classrooms():
-    """
-    Return the list of classrooms where the current user is a member.
-    """
     current_user_id = get_jwt_identity()
 
     memberships = firebase_db.collection("class_membership") \
@@ -1237,43 +1194,9 @@ def get_my_classrooms():
 
     return jsonify(classes), 200
 
-@app.route(BASE_URL+"/classroom/<class_id>/delete", methods=["POST"])
-@jwt_required()
-def delete_classroom(class_id):
-    """
-    Deletes a class and its membership. Requires Professor role.
-    """
-    current_user_id = get_jwt_identity()
-
-    memb = firebase_db.collection("class_membership") \
-        .where("classroom_id", "==", class_id) \
-        .where("user_id", "==", current_user_id) \
-        .where("role_in_class", "==", "Professor") \
-        .limit(1).get()
-
-    if not memb:
-        return jsonify({"error": "Only class professor can delete this classroom"}), 403
-
-    # Delete the classroom
-    firebase_db.collection("classroom").document(class_id).delete()
-
-    return jsonify({"message": "Classroom deleted"}), 200
-
 @app.route(BASE_URL+"/classroom/<classroom_id>/assignments", methods=["POST"])
 @jwt_required()
 def create_assignment(classroom_id):
-    """
-    Create an assignment for a classroom.
-    Body JSON:
-    {
-      "title": "...",
-      "description": "...",
-      "required_sessions": 5,
-      "allowed_names": ["Reversible Pulpitis", "Acute Apical Abscess"],
-      "start_at": "2026-01-10T00:00:00Z",   # optional
-      "due_at": "2026-01-20T23:59:59Z"     # optional
-    }
-    """
     current_user_id = get_jwt_identity()
     data = request.get_json() or {}
 
@@ -1283,14 +1206,9 @@ def create_assignment(classroom_id):
     allowed_names = data.get("allowed_names") or []
     allowed_categories = data.get("allowed_categories") or []
 
-    # dacă vrei allowed_names OBLIGATORIU:
-    # if not title or required_sessions <= 0 or not allowed_names:
-    #     return jsonify({"error": "title, required_sessions > 0 and allowed_names are required"}), 400
-
     if not title or required_sessions <= 0:
         return jsonify({"error": "title and required_sessions > 0 are required"}), 400
 
-    # verifică că userul este Professor în clasa asta
     memb = (
         firebase_db.collection("class_membership")
         .where("classroom_id", "==", classroom_id)
@@ -1300,7 +1218,7 @@ def create_assignment(classroom_id):
         .get()
     )
     if not memb:
-        return jsonify({"error": "Only class professor can create assignments"}), 403
+        return jsonify({"error": "Only class instructor can create assignments"}), 403
 
     ref = firebase_db.collection("assignment").document()
     ref.set({
@@ -1322,9 +1240,6 @@ def create_assignment(classroom_id):
 @app.route(BASE_URL+"/classroom/<class_id>/assignments", methods=["GET"])
 @jwt_required()
 def list_class_assignments(class_id):
-    """
-    List all assignments for a classroom, along with the current user's progress.
-    """
     current_user_id = get_jwt_identity()
 
     assignments = firebase_db.collection("assignment") \
@@ -1333,8 +1248,7 @@ def list_class_assignments(class_id):
     result = []
     for a_doc in assignments:
         a = a_doc.to_dict()
-
-        # Fetch user's progress for this assignment
+        
         prog_query = firebase_db.collection("assignment_progress") \
             .where("assignment_id", "==", a_doc.id) \
             .where("user_id", "==", current_user_id) \
@@ -1353,7 +1267,7 @@ def list_class_assignments(class_id):
             total_duration_sec = float(p.get("total_duration_sec", 0))
             if completed_sessions > 0:
                 avg_time_seconds = total_duration_sec / completed_sessions
-
+            
         result.append({
             "id": a_doc.id,
             "title": a.get("title"),
@@ -1372,12 +1286,10 @@ def list_class_assignments(class_id):
 
     return jsonify(result), 200
 
+
 @app.route(BASE_URL+"/assignment/<assignment_id>/delete", methods=["POST"])
 @jwt_required()
 def delete_assignment(assignment_id):
-    """
-    Delete an assignment. Only the creator of the assignment (who is also a professor) can do it.
-    """
     current_user_id = get_jwt_identity()
 
     assignment_doc = firebase_db.collection("assignment").document(assignment_id).get()
@@ -1389,17 +1301,56 @@ def delete_assignment(assignment_id):
     if assignment_data.get("created_by") != current_user_id:
         return jsonify({"error": "Only the professor who created this assignment can delete it"}), 403
 
-    # Ștergerea documentului. Alternativ poți șterge și din assignment_progress, dar depinde de nevoi.
     firebase_db.collection("assignment").document(assignment_id).delete()
     return jsonify({"message": "Assignment deleted successfully"}), 200
+
+
+@app.route(BASE_URL+"/auth/forgot-password", methods=["POST"])
+def forgot_password():
+    data = request.get_json()
+    email = data.get("email", "").strip().lower()
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    user_doc = get_user_by_email(email)
+    if not user_doc:
+        return jsonify({"error": "No user found with this email"}), 404
+
+    new_password = "".join(random.choices(string.ascii_letters + string.digits, k=6))
+    new_password_hash = generate_password_hash(new_password)
+
+    firebase_db.collection("user").document(user_doc.id).update({
+        "password_hash": new_password_hash
+    })
+
+    send_forgot_password_email(email, new_password)
+
+    return jsonify({"message": "A new password has been sent to your email."}), 200
+
+def send_forgot_password_email(to_email, new_password):
+    subject = "Your New DentalTrain Password"
+    body = f"Hello,\n\nYour password has been reset. Your new password is: {new_password}\n\nPlease log in https://dentaltrain.netlify.app/login and change it from your profile as soon as possible."
+
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = SMTP_EMAIL
+    msg['To'] = to_email
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+        print(f"Forgot password email sent to {to_email}")
+    except Exception as e:
+        print(f"Failed to send forgot password email: {e}")
+
+
 
 @app.route(BASE_URL+"/classroom/<class_id>/leaderboard", methods=["GET"])
 @jwt_required()
 def classroom_leaderboard(class_id):
-    """
-    Leaderboard for a single classroom, based on user XP.
-    """
-    # 1. Get all members
     memberships = firebase_db.collection("class_membership") \
         .where("classroom_id", "==", class_id).stream()
 
@@ -1416,7 +1367,6 @@ def classroom_leaderboard(class_id):
         cases_count = int(u.get("cases_completed", 0))
         cases_correct = int(u.get("cases_correct", 0))
         accuracy = int((cases_correct / cases_count) * 100) if cases_count > 0 else 0
-
         users_data.append({
             "user_id": user_id,
             "username": u.get("username"),
@@ -1437,10 +1387,6 @@ def classroom_leaderboard(class_id):
 @app.route(BASE_URL+"/assignment/<assignment_id>/progress", methods=["GET"])
 @jwt_required()
 def assignment_progress(assignment_id):
-    """
-    Report for an assignment:
-    For each student in the classroom: completed/correct/avg time + done/not done.
-    """
     ass_doc = firebase_db.collection("assignment").document(assignment_id).get()
     if not ass_doc.exists:
         return jsonify({"error": "Assignment not found"}), 404
@@ -1449,10 +1395,8 @@ def assignment_progress(assignment_id):
     classroom_id = ass.get("classroom_id")
     required_sessions = int(ass.get("required_sessions", 0))
 
-    # Toți membrii din această clasă (fără a filtra strict după "Student" ca să nu pierdem progresul celor cu roluri mixte)
     memberships = firebase_db.collection("class_membership") \
         .where("classroom_id", "==", classroom_id).stream()
-
     result = []
     for m_doc in memberships:
         m = m_doc.to_dict()
@@ -1463,7 +1407,6 @@ def assignment_progress(assignment_id):
             continue
         u = u_doc.to_dict()
 
-        # Progress for this user on this assignment
         prog_query = firebase_db.collection("assignment_progress") \
             .where("assignment_id", "==", assignment_id) \
             .where("user_id", "==", user_id) \
@@ -1497,12 +1440,6 @@ def assignment_progress(assignment_id):
 
 @app.route(BASE_URL+"/chat/media/<session_id>/<image_type>", methods=["GET"])
 def serve_clinical_image(session_id, image_type):
-    """
-    The frontend calls this: /chat/media/sess_abc123/xray
-    The student sees NOTHING about the diagnosis.
-    """
-
-    # 1. Look up the session to find out which image was assigned
     session_doc = firebase_db.collection("chat_session").document(session_id).get()
 
     if not session_doc.exists:
@@ -1511,24 +1448,18 @@ def serve_clinical_image(session_id, image_type):
     session_data = session_doc.to_dict()
     clinical_context = session_data.get("clinical_context", {})
 
-    # 2. Get the secret filename (e.g., "pulpitis.jpg")
     if image_type == "xray":
-        # In the previous step, we stored the URL/Path here.
-        # Now we expect just a filename like "pulpitis.jpg"
         filename = clinical_context.get("xray_image")
         subfolder = "xrays"
     elif image_type == "examine":
         filename = clinical_context.get("examine_image")
         subfolder = "examine"
     else:
-        return abort(400) # Bad request
+        return abort(400) 
 
     if not filename:
-        return abort(404) # No image for this case
+        return abort(404) 
 
-
-    # 3. Securely send the file from the server's hard drive
-    # The browser receives the image, but the URL remains generic.
     try:
         return send_from_directory(
             directory=os.path.join(ASSETS_FOLDER, subfolder),
@@ -1559,6 +1490,19 @@ def submit_treatment_plan():
 
     return jsonify({"ok": True, "message": "Treatment plan saved."})
 
+@app.route(BASE_URL + '/')
+def serve_frontend_root():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route(BASE_URL + '/<path:path>')
+def serve_static_files(path):
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.exists(file_path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
+
 @app.route(BASE_URL+"/diseases", methods=["GET"])
 @jwt_required()
 def list_diseases():
@@ -1570,10 +1514,11 @@ def list_diseases():
             "id": d.id,
             "name": data.get("name")
         })
-    # Sort by name
     diseases.sort(key=lambda x: x["name"])
     return jsonify(diseases)
 
+
 if __name__ == "__main__":
-    print("Starting DentalSim Backend (Firestore-only) on port 9003...")
-    app.run(host="0.0.0.0", port=9003, debug=True)
+    port = int(os.getenv("PORT", 9004))
+    print(f"Starting DentalSim Backend on port {port}...")
+    app.run(host="0.0.0.0", port=port, debug=True)
