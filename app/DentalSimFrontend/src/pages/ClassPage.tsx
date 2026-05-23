@@ -25,6 +25,7 @@ import {
 import { useHistory, useParams } from 'react-router-dom';
 import { people, bookOutline } from 'ionicons/icons';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 
 interface RouteParams {
     classId: string;
@@ -663,6 +664,10 @@ const ClassPage: React.FC = () => {
                             )}
                         </div>
                     )}
+                </div>
+
+                <div className="px-4">
+                    <PoweredByFooter />
                 </div>
 
                 <IonToast

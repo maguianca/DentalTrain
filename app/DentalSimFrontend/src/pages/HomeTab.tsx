@@ -30,6 +30,7 @@ import {
 
 import logoImg from '../assets/NoBackground.png';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 
 interface Classroom {
     id: string;
@@ -550,6 +551,8 @@ const HomeTab: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    <PoweredByFooter />
                 </div>
 
                 {/* Error Toast */}

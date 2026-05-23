@@ -32,6 +32,7 @@ import {
 } from '../services/BadgeService';
 import BadgeComponent, { BadgeDetail } from '../components/BadgeComponent';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 
 const ProfileTab: React.FC = () => {
     const history = useHistory();
@@ -251,9 +252,7 @@ const ProfileTab: React.FC = () => {
                             <IonIcon icon={logOutOutline} slot="start" />
                             Log Out
                         </IonButton>
-                        <p className="text-center text-xs text-gray-400 mt-4">
-                            DentalTrain v1.0.0 • Built for Dental Students
-                        </p>
+                        <PoweredByFooter />
                     </div>
                 </div>
 
