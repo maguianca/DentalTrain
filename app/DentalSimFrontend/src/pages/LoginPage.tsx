@@ -15,6 +15,7 @@ import { mailOutline, lockClosedOutline } from 'ionicons/icons';
 
 import logoImg from '../assets/NoBackground.png';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 
 const LoginPage: React.FC = () => {
     const history = useHistory();
@@ -228,6 +229,8 @@ const LoginPage: React.FC = () => {
                             </button>
                         </p>
                     </div>
+
+                    <PoweredByFooter variant="light" />
                 </div>
 
                 {/* Success Toast */}

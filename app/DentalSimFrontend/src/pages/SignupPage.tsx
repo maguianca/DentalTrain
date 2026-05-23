@@ -28,6 +28,7 @@ import {
 
 import logoImg from '../assets/NoBackground.png';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 
 const SignupPage: React.FC = () => {
     const history = useHistory();
@@ -415,6 +416,8 @@ const SignupPage: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    <PoweredByFooter variant="light" />
                 </div>
 
                 {/* Email Taken Alert */}

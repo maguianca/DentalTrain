@@ -16,6 +16,7 @@ import {
 } from '@ionic/react';
 import { trophy, medal, flame } from 'ionicons/icons';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 const LeaderboardTab: React.FC = () => {
     const [timeFilter, setTimeFilter] = useState<string>('all');
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -201,6 +202,8 @@ const LeaderboardTab: React.FC = () => {
                             No players yet. Be the first!
                         </div>
                     )}
+
+                    <PoweredByFooter />
                 </div>
             </IonContent>
         </IonPage>

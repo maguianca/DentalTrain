@@ -25,6 +25,7 @@ import {
     lockClosedOutline
 } from 'ionicons/icons';
 import { API_BASE_URL } from '../config';
+import PoweredByFooter from '../components/PoweredByFooter';
 
 const SettingsPage: React.FC = () => {
     const history = useHistory();
@@ -220,6 +221,8 @@ const SettingsPage: React.FC = () => {
                         </IonButton>
                     </IonList>
                 </div>
+
+                <PoweredByFooter />
 
                 <IonToast
                     isOpen={toast.show}
