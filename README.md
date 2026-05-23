@@ -1,14 +1,13 @@
-<<<<<<< HEAD
-# DentalTrain
-DentalTrain: An Intelligent Virtual Patient Simulator for Endodontic Clinical Training
-=======
+
+# DentalTrain: An Intelligent Virtual Patient Simulator for Endodontic Clinical Training
+
 <p align="center">
   <img src="app/DentalSimFrontend/src/assets/NoBackground.png" alt="DentalTrain Logo" width="200"/>
 </p>
 
 # *DentalTrain (Ex-DentalSim)*
 
-**Aplicația poate fi accesată aici:** [DentalTrain-App](https://scs.ubbcluj.ro/aiinference/4)
+**Aplicația poate fi accesată aici:** [DentalTrain-App](https://dentaltrain.netlify.app/)
 
 ## Echipa
 
