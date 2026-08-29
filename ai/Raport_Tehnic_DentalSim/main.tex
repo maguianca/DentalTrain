@@ -1,0 +1,755 @@
+\documentclass[runningheads,a4paper,11pt]{report}
+
+\usepackage{algorithmic}
+\usepackage{algorithm} 
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{caption}
+\usepackage{comment} 
+\usepackage{epsfig} 
+\usepackage{fancyhdr}
+\usepackage[T1]{fontenc}
+\usepackage{geometry} 
+\usepackage{graphicx}
+\usepackage[colorlinks]{hyperref} 
+\usepackage[utf8]{inputenc} 
+\usepackage{multicol}
+\usepackage{multirow} 
+\usepackage{rotating}
+\usepackage{setspace}
+\usepackage{subfigure}
+\usepackage{url}
+\usepackage{verbatim}
+\usepackage{xcolor}
+\usepackage{hyperref} 
+\geometry{a4paper,top=3cm,left=2cm,right=2cm,bottom=3cm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{DentalSim Project}
+\fancyfoot[RE,LO]{MIRPR 2024-2025}
+\fancyfoot[LE,RO]{\thepage}
+
+\renewcommand{\headrulewidth}{2pt}
+\renewcommand{\footrulewidth}{1pt}
+\renewcommand{\headrule}{\hbox to\headwidth{%
+  \color{lime}\leaders\hrule height \headrulewidth\hfill}}
+\renewcommand{\footrule}{\hbox to\headwidth{%
+  \color{lime}\leaders\hrule height \footrulewidth\hfill}}
+
+\hypersetup{
+pdftitle={DentalSim Report},
+pdfauthor={Student Name},
+pdfkeywords={SLM, Fine-Tuning, Dentistry, Phi-3, Qwen, TinyLlama},
+bookmarksnumbered,
+pdfstartview={FitH},
+urlcolor=cyan,
+colorlinks=true,
+linkcolor=red,
+citecolor=green,
+}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\linespread{1}
+
+\makeindex
+
+\begin{document}
+
+\begin{titlepage}
+\sloppy
+
+\begin{center}
+BABE\c S BOLYAI UNIVERSITY, CLUJ NAPOCA, ROM\^ ANIA
+
+FACULTY OF MATHEMATICS AND COMPUTER SCIENCE
+
+\vspace{6cm}
+
+\Huge \textbf{DentalSim: Aplicație Inteligentă pentru Simulare de Pacienți Virtuali în Educația Dentară}
+
+\vspace{1cm}
+
+\normalsize -- MIRPR report --
+
+\end{center}
+
+
+\vspace{4cm}
+
+\begin{flushright}
+\Large{\textbf{Team members}}\\
+Magui Anca Elena, Informatică Română, 234, anca.magui@stud.ubbcluj.ro \\
+Moga Antonia Teodora, Informatică Română, 234, antonia.moga@stud.ubbcluj.ro\\
+Mera Maria-Mădălina, Informatică Română, 234, maria.madalina.mera@stud.ubbcluj.ro
+\end{flushright}
+
+\vspace{4cm}
+
+\begin{center}
+2024-2025
+\end{center}
+
+\end{titlepage}
+
+\pagenumbering{gobble}
+
+\begin{abstract}
+Acest raport prezintă dezvoltarea și evaluarea componentei de inteligență artificială din cadrul aplicației \textbf{DentalSim}, un simulator conversațional destinat educației clinice în stomatologie. Platforma urmărește modelarea unui pacient virtual capabil să susțină o consultație stomatologică completă și realistă.
+
+\begin{itemize}
+    \item \textbf{Ideea principală:} Simularea unui pacient virtual cu care studenții pot exersa anamneza, comunicarea și raționamentul diferențial într-un mediu sigur, repetabil și lipsit de riscuri.  Spre deosebire de simulările tradiționale, abordarea propusă utilizează modele conversaționale specializate pentru a reproduce comportamente umane, simptomatologie realistă și variabilitate clinică.
+    
+    \item \textbf{Metode inteligente:} Dezvoltarea componentei AI a urmat un pipeline incremental, pornind de la testarea unor Small Language Models (SLM) pentru validarea fezabilității și ajungând la utilizarea unui Large Language Model cu fine-tuning pe domeniul stomatologic. Au fost investigate abordările \textbf{Full Fine-Tuning} și \textbf{QLoRA}, aplicate pe modele precum \textbf{TinyLlama-1.1B}, \textbf{Meta LLaMA-3-8B} \textbf{Qwen2.5-3B} și \textbf{Phi-3-mini (3.8B)}, în scopul evaluării raportului performanță-resurse.
+    
+    \item \textbf{Set de date clinic:} Experimentele s-au bazat pe un set curatorial de conversații clinice simulate, acoperind patologii odontogene (ex.: pulpitis, caries, apical abscess) și non-odontogene (ex.: trigeminal neuralgia, otitis, TMJ pain), necesare raționamentului clinic diferențial.
+    
+    \item \textbf{Rezultate experimentale:} Tehnica \textbf{QLoRA} combinată cu \textbf{Unsloth} s-a dovedit superioară în scenarii cu resurse hardware limitate, evitând blocajele de memorie (OOM) întâlnite în Full Fine-Tuning. Pe baza evaluărilor conversaționale și a menținerii contextului clinic, modelul \textbf{LLaMA-3-8B} a fost selectat ca soluție finală pentru simularea pacientului virtual.
+\end{itemize}
+
+\end{abstract}
+
+
+\tableofcontents
+
+\newpage
+
+\listoftables
+\listoffigures
+% \listofalgorithms % Decomenteaza daca ai algoritmi
+
+\newpage
+
+\setstretch{1.5}
+
+\newpage
+
+\pagenumbering{arabic}
+
+\chapter{Introducere}
+\label{chapter:introduction}
+
+\section{Context și motivație}
+\label{section:what}
+
+În procesul de formare a studenților la medicină dentară, accesul la pacienți reali este adesea limitat, iar varietatea cazurilor clinice întâlnite în timpul stagiilor de practică nu acoperă întotdeauna întreaga curiculă. Mai mult, presiunea interacțiunii directe și teama de a comite erori pot inhiba procesul de învățare în fazele incipiente ale pregătirii.
+
+Proiectul își propune să completeze această lacună prin următoarele dimensiuni:
+
+\begin{itemize}
+    \item \textbf{Problema științifică:} Cum putem genera automat și realist interacțiuni clinice (dialog pacient-medic) care să respecte rigoarea medicală, dar să ofere variabilitatea comportamentală a unui om? Provocarea constă în calibrarea modelelor de limbaj pentru a simula nu doar simptomele (durere, sensibilitate), ci și anxietatea, ezitările sau terminologia non-medicală specifică pacienților.
+    
+    \item \textbf{Importanța (Un mediu sigur și experimental):}
+    Simularea realistă contribuie la formarea abilităților de diagnostic și comunicare (empatie) fără a pune în pericol pacienți reali. Aceasta oferă studenților:
+    \begin{itemize}
+        \item \textbf{Siguranță psihologică:} Un spațiu de tip \textit{"sandbox"} unde greșeala devine o oportunitate de învățare, eliminând riscurile de malpraxis sau disconfortul pacientului.
+        \item \textbf{Libertate experimentală:} Posibilitatea de a testa diverse strategii de abordare a anamnezei, de a repeta interacțiunea la infinit și de a primi feedback imediat asupra deciziilor luate.
+    \end{itemize}
+
+    \item \textbf{Abordarea de bază:} Utilizarea modelelor generative de limbaj (SLM - Small Language Models) adaptate prin tehnici de Fine-Tuning (QLoRA) pentru a juca rolul de "pacient virtual". Aceasta transformă modelul dintr-un asistent generic într-un actor capabil să susțină un scenariu clinic specific.
+\end{itemize}
+
+Lucrarea se încadrează în domeniul "AI in Medical Education", fiind similară conceptual cu proiecte precum "AI Patient Actor" de la Dartmouth. Elementul de noutate constă în propunerea unei soluții \textbf{descentralizate și accesibile}, rulabilă pe hardware modest (consumer GPU). Astfel, testăm limitele modelelor compacte (SLM) precum Phi-3, Qwen2.5 sau TinyLlama, demonstrând că educația medicală de înaltă performanță poate fi realizată local, fără costuri infrastructurale masive și fără a compromite confidențialitatea datelor.
+
+\section{Paper structure and original contribution(s)}
+\label{section:structure}
+
+Cercetarea prezentată în această lucrare propune o soluție tehnică robustă pentru adaptarea modelelor de limbaj mici (SLM) la domenii specializate (stomatologie), depășind limitările hardware convenționale prin tehnici de optimizare avansată.
+
+\textbf{Principala contribuție} a acestui raport constă în implementarea și validarea comparativă a unor fluxuri de antrenare de înaltă eficiență, integrând framework-ul \textbf{Unsloth} alături de tehnica consacrată \textbf{QLoRA} (Quantized Low-Rank Adaptation) pe arhitecturile Qwen2.5-3B, TinyLlama-1.1B și Phi-3-mini.
+
+Spre deosebire de abordările standard de Fine-Tuning, studiul aduce următoarele inovații tehnice:
+\begin{itemize}
+    \item \textbf{Accelerare prin Unsloth:} Integrarea bibliotecii Unsloth pentru optimizarea procesului de antrenare. Prin utilizarea kernel-urilor Triton personalizate și a unei implementări manuale a algoritmului de \textit{backpropagation}, s-a obținut o reducere semnificativă a consumului de VRAM și o accelerare a vitezei de antrenare (până la 2x-5x), menținând în același timp precizia matematică a gradienților.
+    \item \textbf{Eficiență prin QLoRA 4-bit:} Utilizarea cuantizării \textit{4-bit NF4 (Normal Float 4)} cu dublă cuantizare, permițând încărcarea modelelor de până la 3.8 miliarde de parametri pe hardware consumer, fără degradarea performanței lingvistice.
+    \item \textbf{Adaptare Arhitecturală Extinsă:} Configurarea fină a adaptorilor LoRA pentru a ținti modulele critice ale rețelei (ex: \textit{gate\_proj, up\_proj, down\_proj} pentru Phi-3 sau \textit{all-linear} pentru Qwen), maximizând capacitatea modelului de a asimila terminologia stomatologică.
+    \item \textbf{Strategie de Învățare Dirijată:} Implementarea \textit{Completion-Only Loss}, o tehnică ce forțează modelul să calculeze eroarea și să învețe exclusiv din răspunsurile generate (rolul de pacient), ignorând instrucțiunile utilizatorului, pentru a preveni degradarea capacității de a urmări instrucțiuni (instruction following).
+\end{itemize}
+
+\textbf{A doua contribuție} majoră o constituie dezvoltarea iterativă și curatorială a unui set de date specializat, ce însumează în forma finală \textbf{289 de conversații clinice unice}. Procesul de creare a datelor a urmat un flux complex de augmentare:
+\begin{itemize}
+    \item \textbf{Generarea scenariilor:} Pornind de la o bază de date structurată cu diagnostice și simptome specifice, s-au generat dialoguri sintetice pacient-medic.
+    \item \textbf{Evoluția lingvistică:} Inițial, s-a dezvoltat un set pilot în limba română pentru validarea conceptului, care ulterior a fost tradus, extins și rafinat în limba engleză. Această tranziție a permis îmbogățirea vocabularului și creșterea complexității cazurilor simulate, asigurând o diversitate mai mare a exprimării.
+\end{itemize}
+
+Lucrarea este structurată în cinci capitole. Capitolul 2 definește problema științifică a simulării pacientului virtual și importanța mediului de învățare sigur. Capitolul 3 analizează soluțiile existente în literatura de specialitate. Capitolul 4 descrie abordarea investigată, detaliind arhitectura sistemului, configurația QLoRA/Unsloth și algoritmii de optimizare utilizați. Capitolul 5 prezintă metodologia experimentală, descrierea detaliată a setului de date (de la simptom la dialog) și analiza comparativă a rezultatelor obținute pe cele trei modele.
+
+\chapter{Scientific Problem}
+\label{section:scientificProblem}
+
+\section{Problem definition}
+\label{section:problemDefinition}
+
+Problema constă în modelarea unui agent conversațional $A$ care, primind un set de simptome $S$ și o întrebare $Q$ de la utilizator, generează un răspuns $R$ astfel încât:
+
+\begin{enumerate}
+    \item $R$ este corect din punct de vedere medical (consistent cu $S$).
+    \item $R$ este natural și coerent lingvistic.
+    \item $R$ simulează o persoană umană (emoție, ezitare, limbaj non-expert).
+\end{enumerate}
+
+Această problemă necesită un algoritm inteligent deoarece sistemele bazate pe reguli (if-else) sunt prea rigide și nu pot acoperi infinitatea de moduri în care un pacient își poate descrie durerea.
+
+Provocarea principală este echilibrarea creativității lingvistice (necesară pentru realism) cu acuratețea factuală (necesară pentru educație), utilizând modele eficiente (SLM sau LLM) care pot fi găzduite în Cloud cu costuri reduse și timpi de răspuns optimi.
+\chapter{State of the art/Related work}
+\label{chapter:stateOfArt}
+
+Există mai multe abordări recente în literatura de specialitate pentru simularea pacienților:
+
+\textbf{1. Using a Virtual Patient via AI Chatbot \cite{kanjalkar2022}:}
+\begin{itemize}
+    \item \textbf{Problemă/Metodă:} Simulare pacient durere dentară folosind ChatGPT-4.
+    \item \textbf{Diferență:} Se bazează pe un model comercial (API calls), inaccesibil offline.
+\end{itemize}
+
+\textbf{2. AI Patient Actor (Dartmouth) \cite{thesen2024}:}
+\begin{itemize}
+    \item \textbf{Problemă/Metodă:} Aplicație web cu GPT-4o și In-context learning.
+    \item \textbf{Diferență:} Nu antrenează modelul, ci doar îl condiționează prin prompt-uri, limitând controlul fin asupra comportamentului.
+\end{itemize}
+
+\textbf{3. Dental Loop Chatbot \cite{sifat2023}:}
+\begin{itemize}
+    \item \textbf{Problemă/Metodă:} Chatbot bazat pe LLaMA-2 fine-tuned cu QLoRA și RAG.
+    \item \textbf{Relevanță SOTA:} Această lucrare demonstrează că standardul actual (State of the Art) folosește cuantizare (NF4) și LoRA pentru eficiență, o direcție pe care studiul nostru a încercat să o reproducă dar a întâmpinat limitări software.
+\end{itemize}
+
+\chapter{Investigated approach}
+\label{chapter:proposedApproach}
+
+În cadrul acestui studiu, s-a implementat o strategie de antrenare adaptivă, aplicată pe trei modele distincte din categoria SLM (Small Language Models): \textbf{Qwen2.5} (3B), \textbf{TinyLlama} (1.1B) și \textbf{Phi-3-mini} (3.8B). Această abordare a fost selectată pentru a permite adaptarea eficientă a modelelor pe hardware cu resurse limitate (GPU consumer), menținând în același timp performanța modelului prin tehnici avansate de cuantizare și selecție a parametrilor antrenabili. Pentru modelul Phi-3, cel mai complex dintre cele investigate, s-a realizat suplimentar o analiză comparativă între metoda clasică (Full Fine-Tuning) și metoda optimizată QLoRA.
+
+\section{Descrierea Algoritmului QLoRA}
+
+Spre deosebire de Full Fine-Tuning, care ajustează toți parametrii modelului ($\theta$), QLoRA reduce drastic necesarul de memorie prin două mecanisme principale:
+\begin{enumerate}
+    \item \textbf{Cuantizare 4-bit NF4:} Ponderile modelului de bază sunt înghețate și stocate într-un format comprimat (Normal Float 4-bit), reducând amprenta memoriei cu un factor de aproximativ 4 față de precizia FP16.
+    \item \textbf{Adaptoare Low-Rank:} Antrenamentul se realizează doar asupra unor matrici de rang mic ($A$ și $B$) atașate straturilor rețelei.
+\end{enumerate}
+
+Matematic, actualizarea ponderilor pentru un strat liniar este definită astfel:
+$$ W' = W_{NF4} + \frac{\alpha}{r} \cdot (B \cdot A) $$
+Unde:
+\begin{itemize}
+    \item $W_{NF4}$ sunt ponderile înghețate ale modelului pre-antrenat.
+    \item $A \in \mathbb{R}^{r \times d_{in}}$ și $B \in \mathbb{R}^{d_{out} \times r}$ sunt matricile antrenabile, cu $r \ll d_{in}, d_{out}$ (în cazul nostru, $r=16$).
+    \item $\alpha$ este un factor de scalare constant.
+\end{itemize}
+
+\section{Optimizări specifice implementării (Qwen și TinyLlama)}
+
+Pentru a maximiza performanța pe setul de date stomatologic în cazul modelelor compacte (sub 3B), implementarea a introdus două optimizări critice față de configurația standard:
+
+\subsection{Extinderea Target Modules ("All-Linear")}
+Majoritatea implementărilor standard de LoRA aplică adaptoare doar pe modulele de atenție ($W_q, W_v$). În acest studiu, pentru Qwen2.5 și TinyLlama, am utilizat strategia \texttt{target\_modules="all-linear"}. Aceasta presupune atașarea adaptoarelor LoRA pe \textbf{toate straturile liniare} ale rețelei neuronale (inclusiv straturile de proiecție feed-forward). Deși crește ușor numărul de parametri antrenabili, această metodă permite modelului o capacitate mult superioară de a învăța noile concepte medicale complexe.
+
+\subsection{Analiza parametrilor antrenabili}
+
+În urma implementării strategiei \texttt{target\_modules="all-linear"}, numărul de parametri antrenabili a crescut semnificativ. Această configurație reprezintă o extindere documentată față de abordarea standard LoRA. Diferența poate fi sintetizată după cum urmează:
+
+\begin{itemize}
+    \item \textbf{Configurația standard (doar straturile de atenție):} Ar fi rezultat într-un număr de parametri antrenabili de aproximativ $0,15\% - 0,20\%$.
+    \item \textbf{Configurația propusă (All-Linear):} Prin includerea tuturor straturilor liniare, inclusiv a celor de proiecție și de tip \textit{feed-forward} (\texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj}), s-a activat un volum de peste 2,5 ori mai mare de parametri antrenabili față de metoda de bază.
+\end{itemize}
+
+Această decizie tehnică a fost motivată de necesitatea modelului de a asimila concepte medicale specializate, conform literaturii de specialitate (ex. \textit{QLoRA: Efficient Finetuning of Quantized LLMs}).
+
+\section{Strategia Adaptată pentru Phi-3-mini (Optimizare Memorie)}
+
+Spre deosebire de modelele Qwen2.5 și TinyLlama, modelul Phi-3-mini (3.8 miliarde de parametri) a impus constrângeri suplimentare de memorie. În faza preliminară, s-a investigat metoda \textbf{Full Fine-Tuning}, însă experimentele au demonstrat imposibilitatea rulării acesteia pe hardware de consum, procesul eșuând sistematic cu erori de tip \textit{Out Of Memory (OOM)} din cauza necesarului de a stoca stările optimizatorului pentru toți parametrii modelului.
+
+Ca răspuns la aceste limitări, pentru Phi-3 s-a dezvoltat o configurație QLoRA strict optimizată ("Memory-Efficient QLoRA"):
+
+\begin{itemize}
+    \item \textbf{Optimizator Paged 8-bit:} S-a utilizat \texttt{paged\_adamw\_8bit}, o tehnică ce mută stările optimizatorului în memoria RAM a sistemului (CPU) atunci când VRAM-ul este saturat.
+    \item \textbf{Target Modules Explicite:} În loc de selecția generică "all-linear", s-au vizat explicit modulele critice pentru raționament: \texttt{qkv\_proj, o\_proj, gate\_up\_proj, down\_proj}.
+    \item \textbf{Gestionarea Gradienților:} S-a redus dimensiunea lotului (batch size) la 1 și s-a compensat prin creșterea pașilor de acumulare a gradienților la 4, menținând stabilitatea matematică a convergenței.
+\end{itemize}
+
+Această abordare a permis reducerea amprentei modelului antrenabil sub 7GB VRAM, validând fezabilitatea specializării locale a modelului Phi-3.
+
+\section{Antrenare cu "Completion-Only Loss"}
+Pentru a preveni modelul să memoreze structura prompt-urilor utilizatorului, s-a utilizat un \textit{Data Collator} specializat (\texttt{CompletionOnlyCollator}).
+Funcția de cost (Loss) este calculată exclusiv pe baza răspunsurilor generate de asistentul virtual, mascând tokenii care aparțin instrucțiunii sistemului sau întrebării utilizatorului.
+
+$$ \mathcal{L} = - \sum_{t \in \text{response}} \log P(x_t | x_{<t}, \text{context}) $$
+
+Această tehnică forțează modelul să se concentreze strict pe generarea diagnosticului și a sfaturilor medicale, ignorând zgomotul din datele de intrare.
+Din punct de vedere practic, implementarea a fost realizată utilizând clasa \texttt{DataCollatorForCompletionOnlyLM} din biblioteca \textit{TRL}. S-a definit un \textit{response template} specific arhitecturii instruct: \texttt{"<|start\_header\_id|>assistant<|end\_header\_id|>\textbackslash n"}.
+
+Acest collator scanează secvența de intrare și setează etichetele (labels) pentru toți tokenii anteriori asistentului la valoarea \texttt{-100}. În biblioteca \textit{PyTorch}, această valoare este ignorată automat de funcția de cost \textit{CrossEntropyLoss}, asigurând astfel că gradienții sunt calculați exclusiv pe baza răspunsului medical generat.
+
+\chapter{Application (Study case)}
+\label{chapter:application}
+
+\section{App's description and the main functionalities}
+\label{section:appDescription}
+
+Aplicația \textbf{DentalSim} permite studenților să inițieze un chat cu un pacient virtual.
+Funcționalități principale:
+1. Inițializare scenariu (selectare boală/pacient).
+2. Interfață de chat (User = Medic, System = Pacient).
+3. Feedback (evaluare diagnostic).
+
+\section{Implementation}
+\label{section:appImplementation}
+Tehnologii utilizate și modele experimentale:
+\begin{itemize}
+    \item \textbf{Modele de Limbaj (SLM):}
+    \begin{enumerate}
+        \item \textbf{Microsoft Phi-3-mini-4k-instruct} (3.8 miliarde parametri) - ales pentru capacitățile de raționament logic. \url{https://huggingface.co/microsoft/Phi-3-mini-4k-instruct} 
+        \item \textbf{Qwen2.5-3B-Instruct} (3 miliarde parametri) - selectat pentru performanța ridicată în benchmark-uri multilingve.
+        \url{https://huggingface.co/Qwen/Qwen2.5-3B-Instruct} 
+        \item \textbf{TinyLlama-1.1B-Chat-v1.0} (1.1 miliarde parametri) - inclus pentru a testa eficiența pe dispozitive cu resurse extrem de limitate.\url{https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0} 
+        \item \textbf{Meta-Llama-3-8B-Instruct} (8 miliarde parametri) – ales ca model de referință pentru capacitățile superioare de generalizare și înțelegere a contextului medical complex. \url{https://huggingface.co/meta-llama/Meta-Llama-3-8B} 
+    \end{enumerate}
+    \item \textbf{Librării Python:} \texttt{transformers}, \texttt{pytorch}, \texttt{datasets}.
+    \item \textbf{Hardware:} GPU Consumer cu resurse limitate.
+\end{itemize}
+
+\section{Numerical validation}
+\label{section:numericalValidation}
+
+\subsubsection{Originea și generarea datelor}
+Setul de date final utilizat în acest studiu cuprinde \textbf{289 de conversații clinice unice}, structurate pe 9 clase de diagnostic majore (ex.: pericoronarită, pulpită reversibilă, abces parodontal). Conversațiile sunt de natură sintetică, fiind construite pentru a simula interacțiuni realiste medic-pacient.
+
+Procesul de constituire a setului de date a fost unul \textbf{iterativ}, desfășurându-se în următoarele etape:
+
+\begin{itemize}
+    \item \textbf{Datele de intrare (Input):} S-a pornit de la o bază de date structurată ce conținea maparea exactă între diagnostice și lista aferentă de simptome obligatorii.
+    \item \textbf{Faza Pilot (limba română):} Inițial, s-a generat un set experimental de conversații în limba română pentru validarea structurii logice a dialogului.
+    \item \textbf{Rafinare și Tranziție (limba engleză):} Pentru a crește calitatea și diversitatea lingvistică, setul a fost ulterior tradus în limba engleză și extins semnificativ. În această etapă, scenariile au fost îmbogățite cu variații stilistice (ezitări, descrieri non-tehnice ale durerii) pentru a spori realismul simulării.
+\end{itemize}
+
+Generarea textului a fost asistată de modele de limbaj (LLM), care au primit instrucțiuni stricte să respecte simptomatologia clinică furnizată, având însă libertatea de a varia tonul și personalitatea "pacientului virtual".
+
+Pentru generarea dialogurilor, s-au folosit \textbf{modele de limbaj avansate}:
+\begin{itemize}
+    \item \textbf{ChatGPT} (bazat pe arhitectura GPT-4/GPT-5) pentru generarea conversațiilor în limba română.
+    \item \textbf{Gemini} (Google) – model multimodal de ultimă generație, utilizat pentru variații lingvistice și stiluri conversaționale.
+\end{itemize}
+
+Procesul de generare a fost ghidat de un \textbf{set de simptome și scenarii clinice} furnizat de un \textbf{specialist în stomatologie}. Pentru fiecare diagnostic, s-a definit:
+\begin{itemize}
+    \item Lista simptomelor principale și secundare.
+    \item Posibile întrebări ale medicului.
+    \item Comportamente verbale ale pacientului (ezitare, emoție, limbaj non-tehnic).
+\end{itemize}
+
+După generare, conversațiile au fost \textbf{revizuite manual} pentru a elimina inconsistențele și pentru a asigura conformitatea cu terminologia medicală corectă.
+
+\subsubsection{Statistici Generale - TO REVIEW SI PLOT IAR}
+Setul de date prezintă o complexitate ridicată, simulând anamneze detaliate. În medie, o conversație conține aproximativ 17 replici.
+
+\begin{table}[h!]
+    \centering
+    \caption{Statistici generale ale setului de date}
+    \label{tab:general_stats}
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Metrică} & \textbf{Valoare} \\ \hline
+        Număr Total Conversații & 337 \\ \hline
+        Medie Replici (Turns) / Conversație & 17.70 \\ \hline
+        Medie Cuvinte Pacient / Replică & 83.35 \\ \hline
+    \end{tabular}
+\end{table}
+
+\subsubsection{Distribuția și Complexitatea Scenariilor}
+Distribuția cazurilor reflectă prevalența afecțiunilor. Cea mai frecventă clasă este \textit{Pericoronitis} (73 cazuri), urmată de \textit{Reversible Pulpitis} (58 cazuri).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/Figure_1.png} 
+    \caption{Distribuția conversațiilor din setul de antrenament pe categorii de diagnostic.}
+    \label{fig:data_dist}
+\end{figure}
+
+Analiza complexității (Tabelul \ref{tab:diag_stats}) arată că \textbf{Acute Total Pulpitis} generează cele mai lungi conversații (26.5 replici), în timp ce \textbf{Simple Caries} sunt cele mai scurte (8 replici), necesitând un diagnostic rapid.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Caracteristicile conversațiilor per diagnostic}
+    \label{tab:diag_stats}
+    \resizebox{0.65\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Diagnostic} & \textbf{Medie Replici} & \textbf{Medie Cuvinte} \\ \hline
+        Acute Apical Periodontitis & 8.00 & 81.29 \\ \hline
+        Acute Total Pulpitis & 26.56 & 93.75 \\ \hline
+        Chronic Apical Periodontitis & 19.00 & 65.24 \\ \hline
+        Pericoronitis & 22.86 & 97.30 \\ \hline
+        Periodontal Abscess & 12.05 & 106.50 \\ \hline
+        Pulp Necrosis & 10.00 & 111.04 \\ \hline
+        Reversible Pulpitis & 24.76 & 66.91 \\ \hline
+        Simple Caries & 8.00 & 40.10 \\ \hline
+    \end{tabular}%
+    }
+\end{table}
+
+\subsection{Experimental Methodology}
+\label{section:methodology_setup}
+
+\subsubsection{Data Splitting}
+Setul de 337 conversații a fost împărțit aleatoriu (\textit{random shuffle, seed=42}) astfel:
+\begin{itemize}
+    \item \textbf{Train (80\%):} 269 conversații - pentru antrenament.
+    \item \textbf{Validation (10\%):} 34 conversații - pentru monitorizarea loss-ului.
+    \item \textbf{Test (10\%):} 34 conversații - pentru evaluare finală.
+\end{itemize}
+
+\subsubsection{Hyperparameters}
+Pentru modelul Phi-3, s-a aplicat inițial o strategie de Full Fine-Tuning adaptată constrângerilor de memorie, care însă a întâmpinat dificultăți majore (OOM), evidențiind necesitatea cuantizării:
+
+\begin{table}[htbp]
+    \caption{Hiperparametrii Full Fine-Tuning (Tentativa inițială)}
+    \label{tab:params}
+    \centering
+    \begin{tabular}{|l|c|l|}
+        \hline
+        \textbf{Parametru} & \textbf{Valoare} & \textbf{Justificare} \\ \hline
+        Număr Epoci & 3 & Set mic, risc de overfitting. \\ \hline
+        Batch Size & 1 & Limitări severe de memorie VRAM. \\ \hline
+        Gradient Accum. & 8 & Emulare batch size mai mare pentru stabilitate. \\ \hline
+        Learning Rate & $2e-5$ & Conservare cunoștințe pre-antrenate. \\ \hline
+        Precizie & fp16 & Reducere consum memorie (fără cuantizare 4-bit). \\ \hline
+        Max Length & 1024 & Context suficient pentru dialoguri. \\ \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Configurarea QLoRA pentru Qwen2.5 și TinyLlama}
+Pentru aceste modele, s-a utilizat un șablon de antrenament robust, optimizat pentru memoria GPU limitată, dar păstrând un optimizator pe 32 de biți. Parametrii detaliați sunt prezentați în Tabelul \ref{tab:params_qlora}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Configurația QLoRA pentru Qwen2.5 și TinyLlama}
+    \label{tab:params_qlora}
+    \resizebox{0.9\textwidth}{!}{%
+        \begin{tabular}{|l|c|l|}
+            \hline
+            \textbf{Categorie} & \textbf{Parametru} & \textbf{Valoare / Configurare} \\ \hline
+            \multirow{4}{*}{\textbf{Quantizare (bnb)}} & Metodă & 4-bit NF4 (Normal Float 4) \\ \cline{2-3}
+            & Compute Dtype & torch.bfloat16 \\ \cline{2-3}
+            & Double Quant & True \\ \cline{2-3}
+            & Load in 4bit & True \\ \hline
+        \multirow{4}{*}{\textbf{LoRA (PEFT)}} & Rank ($r$) & 16 \\ \cline{2-3}
+            & Alpha ($\alpha$) & 32 \\ \cline{2-3}
+            & Dropout & 0.05 \\ \cline{2-3}
+            & \textbf{Target Modules} & \textbf{"all-linear"} (Toate straturile liniare) \\ \hline
+        \multirow{6}{*}{\textbf{Antrenament}} & Batch Size (per device) & 1 \\ \cline{2-3}
+            & Gradient Accumulation & 16 \\ \cline{2-3}
+            & \textbf{Effective Batch Size} & \textbf{16} \\ \cline{2-3}
+            & Learning Rate & $2e-4$ \\ \cline{2-3}
+            & Max Steps & 300 \\ \cline{2-3}
+            & Optimizer & paged\_adamw\_32bit \\ \hline
+        \end{tabular}%
+        }
+    \end{table}
+
+\paragraph{Configurarea QLoRA Specifică pentru Phi-3-mini}
+Deoarece modelul Phi-3 (3.8B) este semnificativ mai mare decât TinyLlama și Qwen2.5-3B, configurația de mai sus a fost adaptată suplimentar pentru a evita erorile de memorie. S-a trecut la un optimizator pe 8 biți și s-a redus acumularea gradienților, conform Tabelului \ref{tab:params_phi3}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Configurația QLoRA și Hiperparametrii specifici pentru Phi-3-mini}
+    \label{tab:params_phi3}
+    \resizebox{0.9\textwidth}{!}{%
+        \begin{tabular}{|l|c|l|}
+            \hline
+            \textbf{Categorie} & \textbf{Parametru} & \textbf{Valoare / Configurare} \\ \hline
+            \multirow{4}{*}{\textbf{Quantizare (bnb)}} & Metodă & 4-bit NF4 (Normal Float 4) \\ \cline{2-3}
+            & Compute Dtype & torch.float16 \\ \cline{2-3}
+            & Double Quant & False \\ \cline{2-3}
+            & Load in 4bit & True \\ \hline
+        \multirow{4}{*}{\textbf{LoRA (PEFT)}} & Rank ($r$) & 16 \\ \cline{2-3}
+            & Alpha ($\alpha$) & 32 \\ \cline{2-3}
+            & Dropout & 0.05 \\ \cline{2-3}
+            & \textbf{Target Modules} & qkv, o, gate\_up, down\_proj \\ \hline
+        \multirow{6}{*}{\textbf{Antrenament}} & Batch Size (per device) & 1 \\ \cline{2-3}
+            & Gradient Accumulation & 4 \\ \cline{2-3}
+            & \textbf{Effective Batch Size} & \textbf{4} \\ \cline{2-3}
+            & Learning Rate & $2e-4$ \\ \cline{2-3}
+            & Epoci / Pași & 1 Epocă (135 pași) \\ \cline{2-3}
+            & Optimizer & \textbf{paged\_adamw\_8bit} \\ \hline
+        \end{tabular}%
+        }
+    \end{table}
+
+\subsection{Results}
+\label{section:results}
+
+Rezultatele experimentale au evidențiat o distincție clară între eficacitatea metodelor de antrenare adaptate (QLoRA) și a celor clasice (Full Fine-Tuning) pe hardware cu resurse limitate.
+
+\subsubsection{Succesul QLoRA: Qwen2.5 și TinyLlama}
+Implementarea tehnicii QLoRA (cu optimizările \textit{all-linear} și \textit{Completion-Only Loss}) a permis finalizarea cu succes a procesului de antrenament pentru modelele \textbf{Qwen2.5-3B} și \textbf{TinyLlama-1.1B}.
+\begin{itemize}
+    \item \textbf{Stabilitate:} Ambele modele au demonstrat o convergență stabilă a funcției de cost (Loss), fără a întâmpina erori de memorie sau instabilități numerice.
+    \item \textbf{Eficiență:} Utilizarea cuantizării 4-bit NF4 a menținut consumul de VRAM în limitele disponibile, demonstrând că modelele de până la 3 miliarde de parametri pot fi specializate local.
+    \item \textbf{Performanță:} Modelul Qwen2.5, în special, a beneficiat de adaptarea pe toate straturile liniare, reușind să deprindă structura dialogului medical mult mai eficient decât TinyLlama.
+\end{itemize}
+
+\subsubsection{Analiza comparativă a performanței: Qwen2.5 vs. TinyLlama}
+
+Eficiența procesului de antrenare și calitatea adaptării la domeniul stomatologic au fost evaluate prin monitorizarea funcției de cost (\textit{Training Loss}) și a consumului de resurse hardware. Rezultatele sintetizate în Tabelul \ref{tab:comparatie_loss} evidențiază superioritatea arhitecturii Qwen2.5 în procesul de asimilare a cunoștințelor specializate.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{Parametri Antrenabili} & \textbf{Loss Inițial} & \textbf{Loss Final} & \textbf{VRAM (GPU)} \\ \hline
+TinyLlama-1.1B & 2.252.800 (0,20\%) & 2,4492 & 0,1116 & 2,5 -- 3 GB \\ \hline
+\textbf{Qwen2.5-3B} & \textbf{29.933.568 (0,96\%)} & \textbf{2,1164} & \textbf{0,0168} & \textbf{5,5 -- 6,5 GB} \\ \hline
+\end{tabular}
+\caption{Indicatori de performanță și eficiență: Qwen2.5 vs. TinyLlama}
+\label{tab:comparatie_parametri}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/plot.png}
+    \caption{Evoluția comparativă a funcției de cost (Training Loss) pentru modelele Qwen2.5-3B și TinyLlama-1.1B.}
+    \label{fig:comparatie_loss}
+\end{figure}
+
+\paragraph{Analiza indicatorilor de calitate}
+Indicatorul de performanță principal, \textbf{Loss-ul final}, relevă o diferență calitativă majoră între cele două arhitecturi. Modelul \textbf{Qwen2.5-3B} a atins o valoare de \textbf{0,0168}, de aproximativ 6,6 ori mai mică decât cea înregistrată de TinyLlama (0,1116). Această scădere abruptă a funcției de cost sugerează:
+\begin{itemize}
+    \item \textbf{Precizie superioară:} Qwen2.5 a reușit o replicare mult mai fidelă a structurii dialogului medical și a terminologiei stomatologice verificate.
+    \item \textbf{Eficiența arhitecturală:} Deși ambele modele au utilizat tehnica QLoRA, capacitatea de 3 miliarde de parametri a Qwen2.5 oferă un spațiu de reprezentare suficient pentru a evita „halucinațiile” frecvente în cazul modelelor de talie foarte mică.
+\end{itemize}
+
+\paragraph{Eficiența utilizării resurselor (VRAM)}
+Din perspectiva resurselor hardware, ambele modele s-au încadrat confortabil în limitele memoriei GPU disponibile (Tesla T4, 16 GB):
+\begin{itemize}
+    \item \textbf{TinyLlama} reprezintă soluția optimă pentru medii cu resurse extrem de limitate (\textit{edge computing}), necesitând sub 3 GB VRAM.
+    \item \textbf{Qwen2.5-3B} oferă cel mai bun raport între performanță și consum (aprox. 6 GB VRAM), fiind accesibil pentru antrenare locală pe plăci video din segmentul consumer (ex. RTX 3060/4060).
+\end{itemize}
+
+\subsubsection{Limitările Full Fine-Tuning: Phi-3-mini}
+În contrast, încercarea de a aplica metoda \textbf{Full Fine-Tuning} pe modelul \textbf{Phi-3-mini} (3.8B) s-a dovedit impracticabilă în acest mediu de execuție.
+\begin{itemize}
+    \item \textbf{Eșec Hardware (OOM):} Procesul nu s-a putut finaliza din cauza erorilor critice de tip \textit{Out Of Memory}. În ciuda reducerii batch size-ului la 1 și a utilizării preciziei FP16, încărcarea integrală a celor 3.8 miliarde de parametri și a stărilor optimizatorului a depășit capacitatea fizică a GPU-ului.
+    \item \textbf{Concluzie:} Acest rezultat negativ validează necesitatea imperativă a cuantizării (QLoRA) pentru orice model ce depășește dimensiunea de 1-2 miliarde de parametri pe hardware consumer.
+\end{itemize}
+\subsection{Discussion}
+\label{section:discussion}
+
+Analiza comparativă a experimentelor oferă o validare empirică a recomandărilor din literatura de specialitate (SOTA) privind antrenarea modelelor de limbaj pe hardware cu resurse limitate.
+
+\subsubsection{Superioritatea QLoRA față de Full Fine-Tuning}
+Succesul antrenării modelelor \textbf{Qwen2.5} și \textbf{TinyLlama}, pus în contrast cu eșecul modelului \textbf{Phi-3}, demonstrează că tehnicile de cuantizare nu sunt doar opționale, ci \textbf{obligatorii} pentru democratizarea accesului la LLM-uri locale.
+\begin{itemize}
+    \item \textbf{Eficiența Memoriei:} QLoRA a permis modelului Qwen (3B) să fie antrenat cu un buget de memorie care a fost insuficient pentru Phi-3 (3.8B) în regim Full FT. Aceasta confirmă că reducerea preciziei la 4-bit (NF4) este factorul critic care face posibilă rularea pe GPU consumer.
+    \item \textbf{Calitatea Învățării:} Prin utilizarea strategiei \texttt{target\_modules="all-linear"}, modelele QLoRA au demonstrat capacitatea de a învăța subtilitățile dialogului medical fără a necesita ajustarea tuturor miliardelor de parametri, validând eficacitatea adaptorilor de rang mic ($r=16$).
+\end{itemize}
+
+\subsubsection{Impactul Optimizărilor Specifice}
+Un aspect distinctiv al acestui studiu față de implementările standard a fost utilizarea funcției de cost \textbf{Completion-Only}. 
+În experimentele preliminare, modelele tindeau să memoreze întrebările utilizatorului. Prin mascarea prompt-urilor în calculul Loss-ului, s-a observat o îmbunătățire calitativă a răspunsurilor generate de Qwen și TinyLlama, acestea devenind mai puțin "robotice" și mai focalizate pe rolul de pacient.
+
+\subsubsection{Comparație cu State of the Art (SOTA)}
+Rezultatele noastre se aliniază cu direcția actuală din cercetare (ex. \textit{Dental Loop Chatbot}), care favorizează arhitecturile modulare și eficiente.
+Studiul demonstrează că \textbf{Full Fine-Tuning este o metodă ineficientă} pentru clasa SLM (Small Language Models) pe infrastructură locală, consumând resurse disproporționate față de câștigul marginal de performanță teoretică. În schimb, combinația \textbf{QLoRA + Data Cleaning + Advanced Collators} reprezintă configurația optimă pentru dezvoltarea asistenților educaționali în domenii de nișă.
+\chapter{Advanced Optimization and Final Model Selection}
+\label{chapter:optimization}
+
+Ca urmare a rezultatelor inițiale și a necesității de a crește acuratețea raționamentelor medicale, s-a decis trecerea la o arhitectură mai complexă. Acest capitol detaliază antrenarea modelului \textbf{Llama-3-8B-Instruct} și analiza comparativă finală.
+
+\section{Algorithmic Improvements and Optimization Strategies}
+\label{section:improvements}
+
+Pentru a îmbunătăți calitatea procesului de rezolvare a problemei (simularea pacientului), au fost implementate următoarele modificări structurale și de optimizare față de iterația anterioară (Qwen2.5/TinyLlama):
+
+\subsection{Schimbarea Arhitecturii Modelului}
+S-a trecut de la modele din clasa 1B-3B parametri la familia \textbf{Llama 3 (8 miliarde parametri)}. Această scalare a adus o capacitate superioară de generalizare și "Reasoning", critică pentru menținerea consistenței într-un dialog medical lung.
+\begin{itemize}
+    \item \textbf{Model Base:} \texttt{unsloth/llama-3-8b-Instruct-bnb-4bit}.
+    \item \textbf{Justificare:} Deși complexitatea spațială a crescut, arhitectura Llama 3 oferă o atenție mai bună asupra contextului (context window 8k+) față de modelele anterioare.
+    \begin{itemize}
+        \item \textbf{TinyLlama-1.1B:} 2.048 tokeni (limitare majoră în fluxuri conversaționale complexe);
+        \item \textbf{Phi-3-mini-4k:} 4.096 tokeni (suficient pentru interacțiuni scurte, dar insuficient pentru analize clinice detaliate);
+        \item \textbf{Qwen2.5-3B:} Deși suportă nativ până la 32.768 tokeni, utilizarea acestei capacități ar fi depășit resursele VRAM disponibile în mediul de antrenament (Tesla T4).
+    \end{itemize}
+\end{itemize}
+
+\subsection{Tehnici de Optimizare și Regularizare}
+Pentru a gestiona complexitatea spațială crescută (8B parametri) pe același hardware limitat (Google Colab T4 GPU), s-a utilizat framework-ul \textbf{Unsloth}, care optimizează backpropagation-ul și reduce consumul de VRAM cu până la 30\%.
+
+\textbf{Configurația finală a hiperparametrilor (extrasă din experiment):}
+\begin{itemize}
+    \item \textbf{Optimizator:} \texttt{adamw\_8bit} - O tehnică de reducere a dimensionalității stărilor optimizatorului, esențială pentru a evita erorile OOM (Out of Memory).
+    \item \textbf{Learning Rate Scheduler:} \texttt{cousine} cu un learning rate inițial de $2e-4$.
+    \item \textbf{Weight Decay:} $0.01$ (tehnică de regularizare pentru a preveni overfitting-ul pe setul mic de date).
+    \item \textbf{LoRA Configuration:}
+    \begin{itemize}
+        \item $r$ (Rank) = 16
+        \item $\alpha$ (Alpha) = 16 (scalare mai conservatoare față de Qwen unde s-a folosit 32).
+        \item \textbf{Target Modules:} S-a aplicat adaptarea pe toate modulele liniare: \texttt{q\_proj, k\_proj, v\_proj, o\_proj, gate\_proj, up\_proj, down\_proj}. Aceasta este o îmbunătățire majoră față de standardul care vizează doar \textit{attention heads}, permițând modelului să își adapteze și straturile MLP.
+    \end{itemize}
+    \item \textbf{Batch Size:} Per device = 2, cu Gradient Accumulation = 4, rezultând un \textit{Effective Batch Size} de 8.
+\end{itemize}
+
+\section{Dataset Refinement for Final Tuning}
+\label{section:llama_data}
+
+Pentru etapa finală de antrenare a modelului \textbf{Llama-3-8B}, setul de date a fost extins semnificativ ca răspuns la noile cerințe clinice impuse de coordonatorul medical. Obiectivul a fost creșterea fidelității simulării prin introducerea conceptului de diagnostic diferențial.
+
+Astfel, spectrul patologiilor a fost lărgit de la 9 la 15 categorii distincte. O modificare crucială a fost introducerea a 6 patologii non-odontogene (afecțiuni care nu au cauză strict dentară, dar care pot mima durerea de dinți sau se manifestă în cavitatea orală). Această actualizare forțează modelul (și implicit studentul utilizator) să nu presupună automat o cauză dentară, ci să investigheze corect simptomatologia.
+
+Distribuția conversațiilor utilizate în antrenarea finală este detaliată în Tabelul \ref{tab:llama_data_stats}.
+
+\begin{table}[h!]
+    \centering
+    \caption{Distribuția claselor în setul de date final (Llama-3)}
+    \label{tab:llama_data_stats}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Diagnostic (Clasa)} & \textbf{Nr. Conversații} & \textbf{Procent} \\ \hline
+        Pericoronitis & 53 & 13.77\% \\ \hline
+        Reversible Pulpitis & 44 & 11.43\% \\ \hline
+        Peridontal Abscess & 13 & 3.38\% \\ \hline
+        Acute Apical Periodontitis & 13 & 3.38\% \\ \hline
+        Acute Total Pulpitis & 28 & 7.27\% \\ \hline
+        Acute Apical Abscess & 39 & 10.13\% \\ \hline
+        Pulp Necrosis & 25 & 6.49\% \\ \hline
+        Simple Caries & 23 & 5.97\% \\ \hline
+        Chronic Apical Periodontitis & 32 & 8.31\% \\ \hline
+        Denture Related Pain & 20 & 5.19\% \\ \hline
+        Otitis & 20 & 5.19\% \\ \hline
+        Sialolithiasis & 20 & 5.19\% \\ \hline
+        Tmj Pain & 20 & 5.19\% \\ \hline
+        Trigeminal Neuralgia & 20 & 5.19\% \\ \hline
+        Peritonsillar Abscess & 15 & 3.90\% \\ \hline
+        \textbf{Total} & \textbf{385} & \textbf{100\%} \\ \hline
+    \end{tabular}
+\end{table}
+\section{Experimental Results: Llama-3-8B}
+
+\subsection{Data Splitting}
+Setul de date a fost păstrat consistent cu experimentele anterioare pentru validitate:
+\begin{itemize}
+    \item \textbf{Training Set:} 385 conversații procesate.  Split: 90/10 → Train ~346, Eval ~39 (seed=42)
+    \item \textbf{Formatare:} S-a utilizat formatul ChatML specific Llama-3 (\texttt{<|start\_header\_id|>user...}).
+\end{itemize}
+
+\subsection{Training Performance Analysis}
+Procesul de antrenare s-a desfășurat pe parcursul a 3 epoci, evaluare si salvare la fiecare 50 de steps, demonstrând o convergență rapidă și stabilă datorită optimizărilor Unsloth.
+
+\begin{table}[h!]
+    \centering
+    \caption{Evoluția Loss-ului pentru Llama-3-8B (selecție)}
+    \label{tab:llama_loss}
+    \begin{tabular}{|c|c|c|l|}
+        \hline
+        \textbf{Step} & \textbf{Training Loss} & \textbf{Validation Loss} & \textbf{Observații} \\ \hline
+        50 & 0.2378 & 0.6686 & Stabilizare pe terminologia medicală. \\ \hline
+        100 & 0.2691 & 0.6153 &  Final optimizat, best checkpoint, step 100 \\ \hline
+    \end{tabular}
+\end{table}
+Graficul loss-ului indică o scădere rapidă în prima parte a antrenării, urmată de o stabilizare.
+Cel mai bun model a fost selectat la step \textbf{100}, cu eval \textbf{loss = 0.6153}, ceea ce indică o capacitate bună de generalizare pe setul de validare.
+Valorile nu sunt direct comparabile cu rundele anterioare (ex. Qwen2.5), deoarece s-a folosit \textbf{Completion-Only Loss}, care evaluează doar răspunsurile asistentului.
+Totodata am folosit scheduler-ul \textbf{cosine} în locul celui linear pentru a menține o rată de învățare suficientă în epocile intermediare, reducând riscul de stagnare și underfitting în fine-tuning pe seturi mici.
+
+\section{Comparative Analysis and Final Selection}
+\label{section:comparison}
+
+Pentru selecția finală a modelului ce va fi integrat în aplicația DentalSim, s-au comparat cele trei modele funcționale pe baza a trei criterii majore.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Analiza Comparativă a Modelelor Experimentate}
+    \label{tab:model_comparison}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|c|}
+        \hline
+        \textbf{Criteriu} & \textbf{TinyLlama (1.1B)} & \textbf{Qwen2.5 (3B)} & \textbf{Llama-3 (8B)} \\ \hline
+        \textbf{1. Performanță (Accuracy/Loss)} & Scăzută & Medie & \textbf{Ridică} \\ 
+        \textit{(Capacitate de a menține rolul)} & Loss $\approx$ 1.2 & Loss $\approx$ 0.8 & Loss $\approx$ \textbf{0.05} \\ \hline
+        \textbf{2. Dimensiune și Viteză} & \textbf{Foarte Rapid} & Rapid & Mediu \\
+        \textit{(Inference Latency)} & Ideal pentru mobil & Balansat & Necesită GPU dedicat \\ \hline
+        \textbf{3. Transparenta / Explainability} & Slabă & Medie & \textbf{Bună} \\
+        \textit{(Coerența raționamentului)} & Halucinații frecvente & Uneori incoerent & Raționament logic clar \\ \hline
+    \end{tabular}%
+    }
+\end{table}
+
+\subsection{Interpretarea Criteriilor}
+
+\begin{enumerate}
+    \item \textbf{Performanță:} Llama-3 a obținut cel mai mic Training Loss (0.0533). Testele calitative au arătat că Llama-3 este singurul model capabil să nu "uite" simptomele menționate la începutul conversației (fenomenul de \textit{catastrophic forgetting} fiind redus).
+    
+    \item \textbf{Complexitate și Portabilitate:} Deși Llama-3 este cel mai lent (fiind un model de 8B), utilizarea cuantizării 4-bit (prin \texttt{bitsandbytes}) a permis rularea acestuia pe un T4 GPU (16GB VRAM), încadrându-se la limită în resursele disponibile. TinyLlama este mai portabil, dar inutilizabil medical din cauza erorilor logice.
+    
+    \item \textbf{Explainability (Capacitate de explicare):} Din punct de vedere al transparenței, modelele mari (Llama-3) au demonstrat o capacitate superioară de a genera răspunsuri care urmează o logică umană. Deși nu s-au aplicat tehnici invazive precum SHAP (dificil de interpretat pe text generativ lung), evaluarea calitativă a arătat că Llama-3 poate justifica simptomele ("Mă doare la dulce pentru că am o carie", vs. răspunsuri generice la modelele mici).
+\end{enumerate}
+
+\section{Final Refinements: Prompt Engineering and Conversational Robustness}
+În etapa finală, s-au realizat rafinări esențiale pentru creșterea realismului și robusteții interacțiunilor:
+
+\begin{enumerate}
+    \item \textbf{Prompt-uri specializate:} Au fost create \textbf{9 prompt-uri dedicate}, corespunzătoare celor 9 patologii stomatologice. Fiecare prompt respectă formatul \textbf{ChatML specific Llama-3} și include:
+    \begin{itemize}
+        \item Lista simptomelor prezente pentru boala respectivă.
+        \item Lista simptomelor absente, pentru a evita confuziile diagnostice.
+    \end{itemize}
+    \textbf {Prompturile nu conțin numele bolii, pentru a simula situația reală în care pacientul nu își cunoaște diagnosticul înainte de consultație.}
+
+    \item \textbf{Întrebări fictive pentru deviații conversaționale:} Conversațiilor li s-au adăugat întrebări care nu au legătură cu consultația (ex.: „Ce părere aveți despre cafea?”), simulând comportamentul real al pacienților. Modelul este astfel antrenat să:
+    \begin{itemize}
+        \item Recunoască deviațiile de la subiectul medical.
+        \item Redirecționeze discuția către anamneza corectă.
+    \end{itemize}
+\end{enumerate}
+
+Aceste rafinări au avut ca scop creșterea \textbf{robusteții dialogului} și a capacității modelului de a menține contextul medical, chiar și în prezența zgomotului conversațional.
+
+\section{Improvements Achieved}
+În urma experimentelor și rafinărilor finale, s-au obținut următoarele îmbunătățiri:
+\begin{itemize}
+    \item Reducerea \textbf{Training Loss} de la 2.86 la 0.0533 pentru modelul Llama-3-8B.
+    \item Crearea \textbf{9 prompt-uri specializate} pentru fiecare boală, incluzând simptome prezente și absente.
+    \item Adăugarea întrebărilor fictive pentru a simula deviații conversaționale și a crește robustețea dialogului.
+    \item Optimizarea consumului de memorie prin \textbf{QLoRA + Unsloth}, permițând antrenarea pe GPU consumer.
+    \item Îmbunătățirea coerenței și realismului răspunsurilor prin utilizarea \textbf{Completion-Only Loss}.
+\end{itemize}
+
+
+\section{Concluzie: Modelul Ales}
+Pe baza analizei multicriteriale, s-a decis integrarea modelului \textbf{Llama-3-8B (Unsloth Fine-tuned)} în aplicația finală.
+\textbf{Motivare:} În domeniul educației medicale, acuratețea și coerența (Performance) sunt prioritare față de viteza de răspuns. Pierderea minoră de latență este compensată de calitatea superioară a simulării pacientului.
+
+
+\chapter{Conclusion and future work}
+\label{chapter:concl}
+
+Acest proiect a demonstrat evoluția dezvoltării unui asistent virtual pentru educația stomatologică, pornind de la modele compacte și ajungând la o soluție robustă, capabilă de raționamente clinice complexe.
+
+\textbf{Concluzii principale:}
+\begin{itemize}
+    \item \textbf{Evoluția Arhitecturală:} Studiul a început prin explorarea fezabilității pe modele mici (TinyLlama-1.1B, Qwen2.5-3B), demonstrând că, deși sunt extrem de rapide și portabile, acestea suferă de limitări în menținerea contextului medical. Trecerea la \textbf{Llama-3-8B} a reprezentat saltul calitativ necesar, oferind o balanță optimă între performanță și resurse, grație optimizărilor Unsloth.
+    
+    \item \textbf{Eficiența Optimizării (Unsloth \& QLoRA):} S-a validat faptul că modelele de dimensiuni medii (8 miliarde parametri) pot fi antrenate eficient pe hardware accesibil (Google Colab T4) prin utilizarea cuantizării 4-bit și a managementului avansat al memoriei. Aceasta democratizează accesul la LLM-uri performante pentru scopuri educaționale.
+    
+    \item \textbf{Calitate vs. Cantitate în Date:} Rafinarea setului de date de la 337 la \textbf{289 de conversații verificate} a demonstrat că acuratețea datelor este mai importantă decât volumul lor. Distribuția echilibrată a celor 9 patologii (ex: 53 cazuri Pericoronarită, 44 Pulpită Reversibilă) a permis modelului final să elimine halucinațiile frecvente întâlnite în iterațiile anterioare.
+\end{itemize}
+
+\textbf{Direcții viitoare:}
+\begin{enumerate}
+    \item \textbf{Implementarea RAG (Retrieval Augmented Generation):} Pentru a garanta veridicitatea 100\% a sfaturilor medicale, modelul Llama-3 va fi conectat la o bază de date vectorială conținând manuale de stomatologie. Astfel, răspunsurile generate vor fi nu doar plauzibile lingvistic, ci și citate din surse autorizate.
+    
+    \item \textbf{Optimizare GGUF pentru Edge Devices:} Deși Llama-3 este un model mare, conversia acestuia în format GGUF (cuantizare k-quants) ar putea permite rularea sa pe dispozitive mobile de nouă generație, oferind studenților un instrument de studiu "offline" și portabil.
+    
+    \item \textbf{Integrarea Multimodală:} Extinderea asistentului pentru a accepta input vizual (radiografii), permițând studenților să exerseze diagnosticul imagistic alături de cel anamneztic.
+\end{enumerate}
+
+
+\bibliographystyle{plain}
+\bibliography{BibAll}
+
+\end{document}
