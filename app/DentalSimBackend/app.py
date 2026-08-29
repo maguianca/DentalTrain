@@ -266,7 +266,7 @@ def create_chat_session(user_id, disease_id, clinical_context, assignment_id=Non
 
 def add_chat_message(session_id, sender, content):
     # Colecție rădăcină, ca în SQLite (FK = session_id)
-    ref = firebase_db.collection("chat_message").document()
+    ref = firebase_db.collection("chat_message_v2").document()
     ref.set({
         "session_id": session_id,
         "sender": sender,
@@ -277,7 +277,7 @@ def add_chat_message(session_id, sender, content):
 
 def get_last_messages(session_id, limit=10):
     # Filtrăm pe session_id și ordonăm desc după timestamp
-    msgs = firebase_db.collection("chat_message") \
+    msgs = firebase_db.collection("chat_message_v2") \
         .where("session_id", "==", session_id) \
         .order_by("timestamp", direction=firestore.Query.DESCENDING) \
         .limit(limit).get()
@@ -1195,7 +1195,7 @@ def save_validation_feedback():
     user_doc = get_user_doc(current_user_id)
     user = user_doc.to_dict() if user_doc else {}
 
-    feedback_ref = firebase_db.collection("validation_response").document()
+    feedback_ref = firebase_db.collection("validation_response_v2").document()
     feedback_ref.set({
         # Who / which case / which round (denormalized so each row is self-contained)
         "user_id": current_user_id,
