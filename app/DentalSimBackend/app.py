@@ -264,7 +264,7 @@ def create_chat_session(user_id, disease_id, clinical_context, assignment_id=Non
     return ref
 
 
-def add_chat_message(session_id, sender, content):
+def add_chat_message(session_id, sender, content, disease_id=None, disease_name=None, is_test=False):
     # Colecție rădăcină, ca în SQLite (FK = session_id)
     ref = firebase_db.collection("chat_message_v2").document()
     ref.set({
@@ -273,6 +273,18 @@ def add_chat_message(session_id, sender, content):
         "content": content,
         "timestamp": firestore.SERVER_TIMESTAMP
     })
+    
+    if is_test:
+        ref_test = firebase_db.collection("chat_message_test").document()
+        ref_test.set({
+            "session_id": session_id,
+            "sender": sender,
+            "content": content,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "disease_id": disease_id,
+            "disease_name": disease_name
+        })
+
     return ref
 
 def get_last_messages(session_id, limit=10):
@@ -599,6 +611,7 @@ def start_random_chat():
         resp["round"] = round_number
         resp["case_number"] = case_number
         resp["total_cases"] = total_cases
+        resp["disease_name"] = disease_name
     return jsonify(resp)
 
 @app.route(BASE_URL+"/classroom/<class_id>/delete", methods=["POST"])
@@ -663,7 +676,8 @@ def chat_greeting():
     except Exception:
         greeting = fallback
 
-    add_chat_message(session_id, "patient", greeting)
+    is_test = session.get("round") is not None
+    add_chat_message(session_id, "patient", greeting, disease_id=session["disease_id"], disease_name=disease.get("name"), is_test=is_test)
     return jsonify({"reply": greeting})
 
 
@@ -682,8 +696,10 @@ def chat():
           return jsonify({"error": "Invalid session"}), 404
       session = session_doc.to_dict()
 
+      is_test = session.get("round") is not None
+
       # mesajul studentului
-      add_chat_message(session_id, "student", user_message)
+      add_chat_message(session_id, "student", user_message, disease_id=session["disease_id"], disease_name=session.get("disease_name"), is_test=is_test)
 
       # sistem prompt din boală
       disease_doc = firebase_db.collection("disease").document(session["disease_id"]).get()
@@ -723,7 +739,7 @@ def chat():
       if disease_name and disease_name.lower() in bot_reply.lower():
           bot_reply = "I'm not sure what's wrong with me, doctor. That's why I came to see you."
 
-      add_chat_message(session_id, "patient", bot_reply)
+      add_chat_message(session_id, "patient", bot_reply, disease_id=session["disease_id"], disease_name=session.get("disease_name"), is_test=is_test)
       return jsonify({"reply": bot_reply})
 
     except requests.exceptions.ConnectionError:

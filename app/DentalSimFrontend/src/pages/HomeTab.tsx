@@ -371,6 +371,7 @@ const HomeTab: React.FC<{ tourPreview?: boolean }> = ({ tourPreview }) => {
                     round: data.round,
                     case_number: data.case_number,
                     total: data.total_cases,
+                    disease_name: data.disease_name
                 }));
             } else {
                 localStorage.removeItem('validation_progress');

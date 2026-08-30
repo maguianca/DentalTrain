@@ -170,6 +170,7 @@ const DiagnosisPage: React.FC<{ tourPreview?: boolean }> = ({ tourPreview }) => 
         }
     })();
     const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+    const [showRealDiagnosis, setShowRealDiagnosis] = useState(false);
 
     // Round/case progress saved when the case was started (see HomeTab).
     const validationProgress = (() => {
@@ -486,6 +487,7 @@ const DiagnosisPage: React.FC<{ tourPreview?: boolean }> = ({ tourPreview }) => 
     const [isLoadingNext, setIsLoadingNext] = useState(false);
     const handleNextCase = async () => {
         setIsLoadingNext(true);
+        setShowRealDiagnosis(false);
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/chat/start/random`, {
@@ -499,6 +501,7 @@ const DiagnosisPage: React.FC<{ tourPreview?: boolean }> = ({ tourPreview }) => 
                     round: data.round,
                     case_number: data.case_number,
                     total: data.total_cases,
+                    disease_name: data.disease_name
                 }));
             } else {
                 localStorage.removeItem('validation_progress');
@@ -565,8 +568,22 @@ const DiagnosisPage: React.FC<{ tourPreview?: boolean }> = ({ tourPreview }) => 
             <IonContent ref={contentRef} className="chat-content">
                 {/* === VALIDATION MODE === round/case progress banner (validators only) */}
                 {isValidator && validationProgress && (
-                    <div className="text-center text-xs font-semibold text-indigo-700 py-1.5 bg-indigo-50 border-b border-indigo-100">
-                        Round {validationProgress.round} · Case {validationProgress.case_number}/{validationProgress.total}
+                    <div className="flex flex-col items-center justify-center text-xs font-semibold text-indigo-700 py-1.5 bg-indigo-50 border-b border-indigo-100 relative">
+                        <div>Round {validationProgress.round} · Case {validationProgress.case_number}/{validationProgress.total}</div>
+                        {validationProgress.disease_name && (
+                            <div className="mt-1">
+                                {showRealDiagnosis ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">Diagnosticul Real: {validationProgress.disease_name}</span>
+                                        <button onClick={() => setShowRealDiagnosis(false)} className="text-gray-500 underline text-[10px]">Ascunde</button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setShowRealDiagnosis(true)} className="text-indigo-500 underline text-[10px]">
+                                        Afișează Diagnosticul Real
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
                 <div className="flex flex-col p-4 gap-3">
